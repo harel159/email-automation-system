@@ -1,0 +1,36 @@
+# === Shared (root level) ===
+node_modules/
+.env
+.env.local
+dist/
+.vscode/
+attachments/
+logs/
+*.log
+
+# === Frontend ===
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/firebase-debug.log*
+frontend/firebase-debug.*.log*
+
+# === Backend ===
+backend/node_modules/
+backend/.env
+backend/logs/
+backend/attachments/
+
+# === Coverage and testing ===
+coverage/
+.nyc_output/
+.eslintcache
+
+# === OS / IDE specific ===
+.DS_Store
+Thumbs.db
+*.pid
+*.seed
+*.pid.lock
+.yarn-integrity
