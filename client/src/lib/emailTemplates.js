@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000/api/template';
+const API_BASE = 'http://localhost:5000/api/email/template';
 
 /**
  * Fetch the current email template from the backend.

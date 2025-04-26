@@ -65,7 +65,7 @@ export default function EmailSender({ authorities = [] }) {
           to: email,
           subject,
           body,
-          file_urls: attachments.map(f => f.file_url) // Ensure attachments are URLs
+          from_name:fromName
         });
       }
 

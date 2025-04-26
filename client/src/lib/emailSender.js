@@ -17,7 +17,6 @@ export async function sendEmail({ to, subject, body, from_name, reply_to, attach
     body,
     from_name,
     reply_to,
-    attachments 
   });
 
   return res.data;
