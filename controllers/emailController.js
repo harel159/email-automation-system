@@ -1,11 +1,16 @@
-import fs from 'fs';
+
+import fs from 'fs/promises';
 import path from 'path';
 import { getAllAttachments } from '../services/attachmentService.js';
 import nodemailer from 'nodemailer';
 
-/**
- * Handles PDF file uploads into /attachments folder
- */
+const TEMPLATE_PATH = path.join('data', 'email_template.json');
+const ATTACHMENTS_DIR = path.join('attachments');
+
+
+
+
+// ========= Upload Attachment ========= //
 export async function uploadAttachmentFile(req, res) {
   if (!req.files || !req.files.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -13,7 +18,6 @@ export async function uploadAttachmentFile(req, res) {
 
   const file = req.files.file;
 
-  // Ensure it's a .pdf
   if (!file.name.endsWith('.pdf')) {
     return res.status(400).json({ error: 'Only PDF files allowed' });
   }
@@ -21,7 +25,6 @@ export async function uploadAttachmentFile(req, res) {
   const uploadPath = path.join('attachments', file.name);
 
   try {
-    // Move file to /attachments folder
     await file.mv(uploadPath);
     res.json({ success: true, filename: file.name });
   } catch (err) {
@@ -30,13 +33,10 @@ export async function uploadAttachmentFile(req, res) {
   }
 }
 
-/**
- * Sends a single test email with all files from /attachments folder
- */
+// ========= Send Test Email ========= //
 export async function sendTestEmail(req, res) {
   const { to, subject, body, from_name, reply_to } = req.body;
 
-  // Always load all attachments from server
   const attachments = getAllAttachments().map(file => ({
     filename: file.name,
     path: file.path
@@ -71,10 +71,7 @@ export async function sendTestEmail(req, res) {
   }
 }
 
-/**
- * Sends the monthly email with all attachments
- * to a list of recipients passed from frontend
- */
+// ========= Send Bulk Emails ========= //
 export async function sendBulkEmails(req, res) {
   const { to = [], subject, body, from_name, reply_to } = req.body;
 
@@ -86,7 +83,6 @@ export async function sendBulkEmails(req, res) {
     filename: file.name,
     path: file.path
   }));
-  console.log("📎 Sending to all recipients with attachments:", attachments);
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -120,3 +116,68 @@ export async function sendBulkEmails(req, res) {
 
   res.json({ success: true, results });
 }
+
+// ========= Get Email Template ========= //
+export async function getEmailTemplate(req, res) {
+  try {
+    const fileContent = await fs.readFile(TEMPLATE_PATH, 'utf-8');
+    const template = JSON.parse(fileContent);
+    res.json(template);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      // File doesn't exist yet → return default empty template
+      return res.json({
+        subject: '',
+        body: '',
+        attachments: [],
+        from_name: '',
+        reply_to: '',
+        is_active: true
+      });
+    }
+    console.error('❌ Failed to load template:', err);
+    res.status(500).json({ error: 'Failed to load template' });
+  }
+}
+
+// ========= Save Email Template ========= //
+export async function saveEmailTemplate(req, res) {
+  const { subject, body, from_name, reply_to, attachments = [] } = req.body;
+
+  const newTemplate = {
+    subject: subject || '',
+    body: body || '',
+    from_name: from_name || '',
+    reply_to: reply_to || '',
+    attachments,
+    is_active: true
+  };
+
+  try {
+    await fs.writeFile(TEMPLATE_PATH, JSON.stringify(newTemplate, null, 2));
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Failed to save template:', err);
+    res.status(500).json({ error: 'Failed to save template' });
+  }
+}
+
+export async function listAttachments(req, res) {
+  try {
+    const files = await fs.readdir(ATTACHMENTS_DIR);
+    const fileDetails = await Promise.all(
+      files.map(async (file) => {
+        const stats = await fs.stat(path.join(ATTACHMENTS_DIR, file));
+        return {
+          name: file,
+          sizeKB: (stats.size / 1024).toFixed(1)
+        };
+      })
+    );
+    res.json(fileDetails);
+  } catch (err) {
+    console.error('❌ Failed to list attachments:', err);
+    res.status(500).json({ error: 'Failed to list attachments' });
+  }
+}
+
