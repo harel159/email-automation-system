@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { getAllAttachments } from '../services/attachmentService.js';
 import nodemailer from 'nodemailer';
+import pool from '../services/db.js';
 
 const TEMPLATE_PATH = path.join('data', 'email_template.json');
 const ATTACHMENTS_DIR = path.join('attachments');
@@ -123,7 +124,13 @@ export async function sendBulkEmails(req, res) {
         replyTo: reply_to || undefined,
         attachments
       });
-
+  
+      // ✅ Update latestInfoDate in the DB
+      await pool.query(
+        'UPDATE issuer SET "latestInfoDate" = NOW() WHERE email = $1',
+        [email]
+      );
+  
       results.push({ to: email, success: true });
     } catch (err) {
       console.error(`❌ Failed to send to ${email}:`, err);
