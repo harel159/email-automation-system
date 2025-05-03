@@ -37,6 +37,16 @@ export async function uploadAttachmentFile(req, res) {
 export async function sendTestEmail(req, res) {
   const { to, subject, body, from_name, reply_to } = req.body;
 
+  if (!Array.isArray(to) || to.length === 0 || to.some(email => typeof email !== 'string')) {
+    return res.status(400).json({ error: "Invalid 'to' field. Must be a non-empty array of strings." });
+  }
+  if (typeof subject !== 'string' || subject.trim() === "") {
+    return res.status(400).json({ error: "Invalid 'subject'. Must be a non-empty string." });
+  }
+  if (typeof body !== 'string' || body.trim() === "") {
+    return res.status(400).json({ error: "Invalid 'body'. Must be a non-empty string." });
+  }
+
   const attachments = getAllAttachments().map(file => ({
     filename: file.name,
     path: file.path
@@ -75,9 +85,16 @@ export async function sendTestEmail(req, res) {
 export async function sendBulkEmails(req, res) {
   const { to = [], subject, body, from_name, reply_to } = req.body;
 
-  if (!Array.isArray(to) || to.length === 0) {
-    return res.status(400).json({ success: false, error: 'No recipients provided' });
+  if (!Array.isArray(to) || to.length === 0 || to.some(email => typeof email !== 'string')) {
+    return res.status(400).json({ error: "Invalid 'to' field. Must be a non-empty array of strings." });
   }
+  if (typeof subject !== 'string' || subject.trim() === "") {
+    return res.status(400).json({ error: "Invalid 'subject'. Must be a non-empty string." });
+  }
+  if (typeof body !== 'string' || body.trim() === "") {
+    return res.status(400).json({ error: "Invalid 'body'. Must be a non-empty string." });
+  }
+
 
   const attachments = getAllAttachments().map(file => ({
     filename: file.name,
@@ -143,6 +160,23 @@ export async function getEmailTemplate(req, res) {
 // ========= Save Email Template ========= //
 export async function saveEmailTemplate(req, res) {
   const { subject, body, from_name, reply_to, attachments = [] } = req.body;
+
+  if (typeof subject !== 'string' || subject.trim() === "") {
+    return res.status(400).json({ error: "Subject is required." });
+  }
+  if (typeof body !== 'string' || body.trim() === "") {
+    return res.status(400).json({ error: "Body is required." });
+  }
+  if (from_name && typeof from_name !== 'string') {
+    return res.status(400).json({ error: "'from_name' must be a string." });
+  }
+  if (reply_to && typeof reply_to !== 'string') {
+    return res.status(400).json({ error: "'reply_to' must be a string." });
+  }
+  if (!Array.isArray(attachments)) {
+    return res.status(400).json({ error: "'attachments' must be an array." });
+  }
+
 
   const newTemplate = {
     subject: subject || '',
