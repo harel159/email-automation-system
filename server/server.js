@@ -26,11 +26,10 @@ console.log(clientDistPath.toString());
 
 app.use(express.static(clientDistPath));
 
-app.get('/*',(req, res, next) => {
+app.get('/*',(req, res) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).send('API route not found');
     }
-
     res?.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
