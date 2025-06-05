@@ -12,7 +12,7 @@ dotenv.config();
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-console.log(__dirname);
+
 app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
@@ -24,7 +24,11 @@ app.use('/api/email', emailRoutes);
 
 app.use(express.static(path.join(__dirname, 'client/dist')));
 
-app.get('*', (req, res) => {
+app.get('*',(req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+        return next();
+    }
+    console.log("aaaaa");
     res?.sendFile(path.join(__dirname, 'client/dist/index.html'));
 });
 
