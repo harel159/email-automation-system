@@ -11,7 +11,6 @@ import { fileURLToPath } from 'url';
 dotenv.config();
 
 const app = express();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(cors());
 app.use(express.json());
@@ -22,14 +21,17 @@ app.use('/attachments', express.static('attachments'));
 app.use('/api/clients', clientRoutes);
 app.use('/api/email', emailRoutes);
 
-app.use(express.static(path.join(__dirname, 'client/dist')));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const clientDistPath = path.resolve(__dirname, '../client/dist');
+
+app.use(express.static(clientDistPath));
 
 app.get('*',(req, res, next) => {
     if (req.path.startsWith('/api/')) {
         return next();
     }
     console.log("aaaaa");
-    res?.sendFile(path.join(__dirname, 'client/dist/index.html'));
+    res?.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 const PORT = process.env.PORT || 5000;
