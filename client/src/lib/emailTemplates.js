@@ -1,7 +1,8 @@
 
 import axios from 'axios';
+import{API_BASE_URL} from "../config";
 
-const API_BASE = '/api/email/template';
+const API_BASE = `${API_BASE_URL}/email/template`;
 
 /**
  * Fetch the current email template from the backend.

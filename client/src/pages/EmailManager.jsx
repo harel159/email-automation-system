@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/component/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/component/ui/tabs";
 import { sendEmail } from "@/lib/emailSender";
 import { getEmailTemplate, saveEmailTemplate } from "@/lib/emailTemplates";
+import {API_BASE_URL} from "../config";
 
 const TABS = {
   TEMPLATE: "template",
@@ -43,7 +44,7 @@ export default function EmailManager() {
 
   const loadAttachments = async () => {
     try {
-      const res = await fetch("/api/email/attachments");
+      const res = await fetch(`${API_BASE_URL}/email/attachments`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setServerAttachments(data);
@@ -61,7 +62,7 @@ export default function EmailManager() {
     loadAttachments();
     const fetchAuthorities = async () => {
       try {
-        const res = await fetch("/api/clients");
+        const res = await fetch( `${API_BASE_URL}/clients`);
         const data = await res.json();
         if (!Array.isArray(data)) throw new Error("Invalid response format");
         setAuthorities(data.filter(item => item.name && item.email));
@@ -120,7 +121,7 @@ export default function EmailManager() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      await fetch("/api/email/upload-attachment", {
+      await fetch(`${API_BASE_URL}/email/upload-attachment`, {
         method: "POST",
         body: formData,
       });

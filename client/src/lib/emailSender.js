@@ -1,4 +1,5 @@
 import axios from 'axios';
+import {API_BASE_URL} from "../config";
 
 /**
  * Sends email to one or more recipients, with subject/body and full attachment list.
@@ -11,7 +12,7 @@ import axios from 'axios';
  * @param {Array<{file_name: string, file_url: string}>} [params.attachments] - Optional attachment list
  */
 export async function sendEmail({ to, subject, body, from_name, reply_to, attachments = [] }) {
-  const res = await axios.post('/api/email/send-all', {
+  const res = await axios.post(`${API_BASE_URL}/email/send-all`, {
     to,
     subject,
     body,

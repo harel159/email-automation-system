@@ -1,6 +1,7 @@
 import axios from 'axios';
+import {API_BASE_URL} from "../config";
 
-const BASE_URL = '/api/clients';
+const BASE_URL_EMAIL = `${API_BASE_URL}/clients` ;
 
 /**
  * Bulk create authorities in the database.
@@ -11,7 +12,7 @@ const BASE_URL = '/api/clients';
  */
 export async function bulkCreateAuthorities(authorities) {
   try {
-    const res = await axios.post(`${BASE_URL}/bulk-create`, { authorities });
+    const res = await axios.post(`${BASE_URL_EMAIL}/bulk-create`, { authorities });
     return res.data?.created || [];
   } catch (err) {
     console.error('❌ Failed to bulk create authorities:', err.message);
@@ -26,7 +27,7 @@ export async function bulkCreateAuthorities(authorities) {
  */
 export async function getAuthorities() {
   try {
-    const res = await axios.get(BASE_URL);
+    const res = await axios.get(BASE_URL_EMAIL);
     return res.data || [];
   } catch (err) {
     console.error('❌ Failed to fetch authorities:', err.message);
@@ -43,8 +44,8 @@ export async function getAuthorities() {
 export async function saveAuthority(authority) {
   try {
     const res = authority.id
-      ? await axios.put(`${BASE_URL}/${authority.id}`, authority)
-      : await axios.post(BASE_URL, authority);
+      ? await axios.put(`${BASE_URL_EMAIL}/${authority.id}`, authority)
+      : await axios.post(BASE_URL_EMAIL, authority);
 
     return res.data;
   } catch (err) {
@@ -61,7 +62,7 @@ export async function saveAuthority(authority) {
  */
 export async function deleteAuthority(id) {
   try {
-    await axios.delete(`${BASE_URL}/${id}`);
+    await axios.delete(`${BASE_URL_EMAIL}/${id}`);
     return true;
   } catch (err) {
     console.error('❌ Failed to delete authority:', err.message);

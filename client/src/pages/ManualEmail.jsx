@@ -7,6 +7,7 @@ import { Loader2, Send, X, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/component/ui/alert";
 import { Badge } from "@/component/ui/badge";
 import { sendEmail } from "@/lib/emailSender";
+import {API_BASE_URL} from "@/config";
 
 export default function ManualEmail() {
   const [subject, setSubject] = useState("");
@@ -27,7 +28,7 @@ export default function ManualEmail() {
 
   const loadAuthorities = async () => {
     try {
-      const res = await fetch("/api/clients");
+      const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Invalid response format");
       const valid = data.filter(item => item.name && item.email);
