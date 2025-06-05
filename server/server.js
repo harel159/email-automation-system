@@ -12,6 +12,7 @@ dotenv.config();
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+console.log(__dirname);
 app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
