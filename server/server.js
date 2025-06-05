@@ -26,13 +26,13 @@ console.log(clientDistPath.toString());
 
 app.use(express.static(clientDistPath));
 
-app.get('*',(req, res, next) => {
+/*app.get('*',(req, res, next) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).send('API route not found');
     }
 
     res?.sendFile(path.join(clientDistPath, 'index.html'));
 });
-
+*/
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '127.0.0.1', () => console.log(`Server running on port ${PORT}`));
