@@ -43,7 +43,7 @@ export default function EmailManager() {
 
   const loadAttachments = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/email/attachments");
+      const res = await fetch("/api/email/attachments");
       const data = await res.json();
       if (Array.isArray(data)) {
         setServerAttachments(data);
@@ -61,7 +61,7 @@ export default function EmailManager() {
     loadAttachments();
     const fetchAuthorities = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/clients");
+        const res = await fetch("/api/clients");
         const data = await res.json();
         if (!Array.isArray(data)) throw new Error("Invalid response format");
         setAuthorities(data.filter(item => item.name && item.email));
@@ -120,7 +120,7 @@ export default function EmailManager() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      await fetch("http://localhost:5000/api/email/upload-attachment", {
+      await fetch("/api/email/upload-attachment", {
         method: "POST",
         body: formData,
       });

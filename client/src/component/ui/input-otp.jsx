@@ -1,5 +1,5 @@
 import * as React from "react"
-import { OTPInput, OTPInputContext } from "input-otp"
+import { OTPInput, OTPInputContext } from "repos/road-protect-email-automation-system/client/src/component/ui/input-otp"
 import { Minus } from "lucide-react"
 
 import { cn } from "@/lib/utils"

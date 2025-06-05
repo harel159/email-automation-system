@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const UPLOAD_ENDPOINT = 'http://localhost:5000/api/email/upload-attachment';
+const UPLOAD_ENDPOINT = '/api/email/upload-attachment';
 
 /**
  * Upload a single attachment file to the backend.

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5000/api/clients';
+const BASE_URL = '/api/clients';
 
 /**
  * Bulk create authorities in the database.

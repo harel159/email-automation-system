@@ -11,7 +11,7 @@ import axios from 'axios';
  * @param {Array<{file_name: string, file_url: string}>} [params.attachments] - Optional attachment list
  */
 export async function sendEmail({ to, subject, body, from_name, reply_to, attachments = [] }) {
-  const res = await axios.post('http://localhost:5000/api/email/send-all', {
+  const res = await axios.post('/api/email/send-all', {
     to,
     subject,
     body,

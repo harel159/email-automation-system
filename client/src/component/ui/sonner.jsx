@@ -1,6 +1,6 @@
 "use client";
 import { useTheme } from "next-themes"
-import { Toaster as Sonner } from "sonner"
+import { Toaster as Sonner } from "repos/road-protect-email-automation-system/client/src/component/ui/sonner"
 
 const Toaster = ({
   ...props
