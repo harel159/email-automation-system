@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: process.env.EMAIL_AUTOMATION_API_BASE_URL || 'http://localhost:5000',
+        target: process.env.VITE_EMAIL_AUTOMATION_API_BASE_URL || 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },
