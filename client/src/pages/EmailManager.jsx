@@ -1,4 +1,3 @@
-// File: src/pages/EmailManager.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/component/ui/card";
 import { Button } from "@/component/ui/button";
@@ -10,7 +9,7 @@ import { Alert, AlertDescription } from "@/component/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/component/ui/tabs";
 import { sendEmail } from "@/lib/emailSender";
 import { getEmailTemplate, saveEmailTemplate } from "@/lib/emailTemplates";
-import {API_BASE_URL} from "../config";
+import { API_BASE_URL } from "../config"; 
 
 const TABS = {
   TEMPLATE: "template",
@@ -44,7 +43,8 @@ export default function EmailManager() {
 
   const loadAttachments = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/email/attachments`);
+      const res = await fetch(`${API_BASE_URL}/email/attachments`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`); 
       const data = await res.json();
       if (Array.isArray(data)) {
         setServerAttachments(data);
@@ -60,19 +60,23 @@ export default function EmailManager() {
   useEffect(() => {
     loadTemplate();
     loadAttachments();
+
     const fetchAuthorities = async () => {
       try {
-        const res = await fetch( `${API_BASE_URL}/clients`);
+        const res = await fetch(`${API_BASE_URL}/clients`, { credentials: 'include' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`); 
         const data = await res.json();
         if (!Array.isArray(data)) throw new Error("Invalid response format");
-        setAuthorities(data.filter(item => item.name && item.email));
+        setAuthorities(data);
       } catch (err) {
         console.error("❌ Failed to load authorities:", err);
         setAuthorities([]);
       }
     };
-    fetchAuthorities();
+
+    fetchAuthorities(); 
   }, []);
+
 
   const handleSave = async () => {
     try {

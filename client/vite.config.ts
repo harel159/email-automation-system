@@ -10,15 +10,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-
   server: {
     proxy: {
       '/api': {
-        target: process.env.VITE_EMAIL_AUTOMATION_API_BASE_URL || 'http://localhost:5000',
+        target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },
     },
-  }
+  },
 })
-

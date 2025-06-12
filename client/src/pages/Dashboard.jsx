@@ -27,6 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/component/ui/dialog";
+import { API_BASE_URL } from "@/config";
+
 
 /**
  * Dashboard – authority manager
@@ -45,10 +47,23 @@ export default function Dashboard() {
   const [editingAuthority, setEditingAuthority] = useState(null);
 
   // ========== LOAD DATA ========== //
-  const fetchAuthorities = async () => {
-    const data = await getAuthorities(); // 🔧 Connects to backend
+const fetchAuthorities = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/clients`, { credentials: 'include' });
+    
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+
+    if (!Array.isArray(data)) throw new Error("Invalid response format");
     setAuthorities(data);
-  };
+  } catch (err) {
+    console.error("❌ Failed to load authorities:", err);
+    setAuthorities([]);
+  }
+};
+
+
 
   useEffect(() => {
     fetchAuthorities();
@@ -83,11 +98,13 @@ export default function Dashboard() {
   };
 
   // Filter based on name or email
-  const filteredAuthorities = authorities.filter(
-    auth =>
-      auth.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      auth.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAuthorities = Array.isArray(authorities)
+  ? authorities.filter(
+      auth =>
+        auth.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        auth.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  : []
 
   // ========== UI ========== //
   return (
@@ -140,7 +157,7 @@ export default function Dashboard() {
                 <TableRow key={authority.id}>
                   <TableCell className="font-medium">{authority.name}</TableCell>
                   <TableCell>{authority.email}</TableCell>
-                  <TableCell>Day {authority.send_date}</TableCell>
+                  <TableCell>{authority.send_date ? `Day ${authority.send_date}` : "-"}</TableCell>
                   <TableCell>
                     {authority.last_email_sent
                       ? format(new Date(authority.last_email_sent), "MMM d, yyyy")
