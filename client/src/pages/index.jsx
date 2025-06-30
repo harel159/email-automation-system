@@ -12,6 +12,10 @@ import EmailManager from "./EmailManager";
 
 import ManualEmail from "./ManualEmail.jsx";
 
+import Login from './Login';
+
+import RequireAuth from '@/component/auth/RequireAuth';
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -27,6 +31,8 @@ const PAGES = {
     EmailManager: EmailManager,
     
     ManualEmail: ManualEmail,
+
+    Login: Login,
     
 }
 
@@ -45,32 +51,59 @@ function _getCurrentPage(url) {
 
 // Create a wrapper component that uses useLocation inside the Router context
 function PagesContent() {
-    const location = useLocation();
-    const currentPage = _getCurrentPage(location.pathname);
-    
-    return (
-        <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Dashboard />} />
-                
-                
-                <Route path="/Dashboard" element={<Dashboard />} />
-                
-                <Route path="/Template" element={<Template />} />
-                
-                <Route path="/History" element={<History />} />
-                
-                <Route path="/Settings" element={<Settings />} />
-                
-                <Route path="/EmailManager" element={<EmailManager />} />
-                
-                <Route path="/ManualEmail" element={<ManualEmail />} />
-                
-            </Routes>
-        </Layout>
-    );
+  const location = useLocation();
+  const currentPage = _getCurrentPage(location.pathname);
+
+  return (
+    <Layout currentPageName={currentPage}>
+      <Routes>
+        {/* Redirect / to /Login */}
+        <Route path="/" element={<Login />} />
+
+        {/* Login page – unprotected */}
+        <Route path="/Login" element={<Login />} />
+
+        {/* Protected Routes */}
+        <Route path="/Dashboard" element={
+          <RequireAuth>
+            <Dashboard />
+          </RequireAuth>
+        } />
+
+        <Route path="/Template" element={
+          <RequireAuth>
+            <Template />
+          </RequireAuth>
+        } />
+
+        <Route path="/History" element={
+          <RequireAuth>
+            <History />
+          </RequireAuth>
+        } />
+
+        <Route path="/Settings" element={
+          <RequireAuth>
+            <Settings />
+          </RequireAuth>
+        } />
+
+        <Route path="/EmailManager" element={
+          <RequireAuth>
+            <EmailManager />
+          </RequireAuth>
+        } />
+
+        <Route path="/ManualEmail" element={
+          <RequireAuth>
+            <ManualEmail />
+          </RequireAuth>
+        } />
+      </Routes>
+    </Layout>
+  );
 }
+
 
 export default function Pages() {
     return (
