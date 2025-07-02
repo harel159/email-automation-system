@@ -43,7 +43,7 @@ const app = express();
 
 // ========== SESSION & CORS ==========
 app.use(cors({
-  origin: 'http://localhost:5173', // adjust if needed
+  origin: ['http://localhost:5173', 'http://185.229.226.173:3010'], // adjust if needed
   credentials: true
 }));
 
