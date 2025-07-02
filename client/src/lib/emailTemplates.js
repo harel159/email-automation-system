@@ -10,7 +10,9 @@ const API_BASE = `${API_BASE_URL}/email/template`;
  * @returns {Promise<Object>} - Template object from DB
  */
 export async function getEmailTemplate() {
-  const res = await axios.get(API_BASE);
+  const res = await axios.get(API_BASE, {
+    withCredentials: true, // ✅ Include session cookie
+  });
   return res.data;
 }
 
@@ -27,6 +29,8 @@ export async function getEmailTemplate() {
  * @returns {Promise<Object>}
  */
 export async function saveEmailTemplate(template) {
-  const res = await axios.post(API_BASE, template);
+  const res = await axios.post(API_BASE, template, {
+    withCredentials: true, // ✅ Include session cookie
+  });
   return res.data;
 }
