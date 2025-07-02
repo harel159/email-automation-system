@@ -23,8 +23,13 @@ const passwordHash = process.env.SHARED_USER_PASSWORD_HASH;
 // ========== AUTH STRATEGY ==========
 passport.use(new LocalStrategy({ usernameField: 'email' }, (email, password, done) => {
   const user = allowedUsers.find(u => u.email === email);
+  console.log(password);
+  console.log(passwordHash);
+  const test = (!bcrypt.compareSync(password, passwordHash));
+    console.log(test);
   if (!user) return done(null, false, { message: 'Invalid email' });
-  if (!bcrypt.compareSync(password, passwordHash)) return done(null, false, { message: 'Wrong password' });
+  if (!bcrypt.compareSync(password, passwordHash)
+) return done(null, false, { message: 'Wrong password' });
   return done(null, user);
 }));
 
