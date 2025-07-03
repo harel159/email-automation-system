@@ -205,20 +205,34 @@ export async function saveEmailTemplate(req, res) {
 
 export async function listAttachments(req, res) {
   try {
+    console.log('📂 Trying to read attachments directory:', ATTACHMENTS_DIR);
+
+    // Check if directory exists
+    const dirExists = await fs.stat(ATTACHMENTS_DIR).then(() => true).catch(() => false);
+    if (!dirExists) {
+      console.error('❌ Attachments directory does not exist:', ATTACHMENTS_DIR);
+      return res.status(500).json({ error: 'Attachments directory missing on server' });
+    }
+
     const files = await fs.readdir(ATTACHMENTS_DIR);
+    console.log('✅ Files found in attachments directory:', files);
+
     const fileDetails = await Promise.all(
       files.map(async (file) => {
-        const stats = await fs.stat(path.join(ATTACHMENTS_DIR, file));
+        const fullPath = path.join(ATTACHMENTS_DIR, file);
+        const stats = await fs.stat(fullPath);
         return {
           name: file,
           sizeKB: (stats.size / 1024).toFixed(1)
         };
       })
     );
+
     res.json(fileDetails);
   } catch (err) {
-    console.error('❌ Failed to list attachments:', err);
+    console.error('❌ Failed to list attachments:', err.stack || err);
     res.status(500).json({ error: 'Failed to list attachments' });
   }
 }
+
 
