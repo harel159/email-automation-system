@@ -9,6 +9,10 @@ import { Strategy as LocalStrategy } from 'passport-local';
 import bcrypt from 'bcrypt';
 import clientRoutes from './routes/clientRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
+import CryptoJS from 'crypto-js';
+
+const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
+
 
 dotenv.config();
 
@@ -21,13 +25,25 @@ const allowedUsers = [
 const passwordHash = process.env.SHARED_USER_PASSWORD_HASH;
 
 // ========== AUTH STRATEGY ==========
-passport.use(new LocalStrategy({ usernameField: 'email' }, (email, password, done) => {
+passport.use(new LocalStrategy({ usernameField: 'email' }, (email, encryptedPassword, done) => {
   const user = allowedUsers.find(u => u.email === email);
   if (!user) return done(null, false, { message: 'Invalid email' });
-  if (!bcrypt.compareSync(password, passwordHash)
-) return done(null, false, { message: 'Wrong password' });
+
+  let decryptedPassword;
+  try {
+    const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_SECRET);
+    decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
+  } catch (e) {
+    return done(null, false, { message: 'Decryption failed' });
+  }
+
+  if (!bcrypt.compareSync(decryptedPassword, passwordHash)) {
+    return done(null, false, { message: 'Wrong password' });
+  }
+
   return done(null, user);
 }));
+
 
 passport.serializeUser((user, done) => done(null, user.email));
 passport.deserializeUser((email, done) => {

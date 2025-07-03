@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/component/ui/input';
 import { Button } from '@/component/ui/button';
 import { API_BASE_URL } from '../config';
+import CryptoJS from 'crypto-js';
+
+const ENCRYPTION_SECRET = 'rVc2BgX7YlplokSK0HtNb5ZGJTyhxERb'
 
 
 
@@ -14,23 +17,26 @@ export default function Login() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+const handleLogin = async () => {
+  setLoading(true);
+  try {
+    const encryptedPassword = CryptoJS.AES.encrypt(password, ENCRYPTION_SECRET).toString();
 
-      if (!res.ok) throw new Error('Login failed');
-      navigate('/Dashboard'); // ✅ redirect to protected page
-    } catch (err) {
-      setError('Invalid email or password.');
-      setLoading(false);
-    }
-  };
+    const res = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: encryptedPassword }),
+    });
+
+    if (!res.ok) throw new Error('Login failed');
+    navigate('/Dashboard');
+  } catch (err) {
+    setError('Invalid email or password.');
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center">
