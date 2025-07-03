@@ -5,13 +5,17 @@ import { Input } from '@/component/ui/input';
 import { Button } from '@/component/ui/button';
 import { API_BASE_URL } from '../config';
 
+
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
@@ -24,6 +28,7 @@ export default function Login() {
       navigate('/Dashboard'); // ✅ redirect to protected page
     } catch (err) {
       setError('Invalid email or password.');
+      setLoading(false);
     }
   };
 
@@ -45,9 +50,11 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <Button className="w-full" onClick={handleLogin}>
-          Login
+        <Button className="w-full flex justify-center items-center gap-2" onClick={handleLogin} disabled={loading}>
+            {loading && <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin" />}
+            {loading ? 'Logging in...' : 'Login'}
         </Button>
+
       </div>
     </div>
   );

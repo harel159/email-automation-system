@@ -42,20 +42,34 @@ export default function EmailManager() {
   }, []);
 
   const loadAttachments = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/email/attachments`, { credentials: 'include' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`); 
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setServerAttachments(data);
-      } else {
-        console.error("Invalid attachments response");
-      }
-    } catch (err) {
-      console.error("Failed to load attachments:", err);
-      setServerAttachments([]);
+  try {
+    console.log("📥 Fetching attachments from:", `${API_BASE_URL}/email/attachments`);
+
+    const res = await fetch(`${API_BASE_URL}/email/attachments`, {
+      credentials: 'include'
+    });
+
+    console.log("📤 Response status:", res.status);
+
+    const text = await res.text();
+    console.log("📦 Raw response:", text);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status} - ${text}`);
+
+    const data = JSON.parse(text);
+    if (!Array.isArray(data)) {
+      console.error("🚫 Invalid format from server:", data);
+      throw new Error("Server returned unexpected format");
     }
-  };
+
+    setServerAttachments(data);
+  } catch (err) {
+    console.error("❌ Failed to load attachments:", err);
+    setServerAttachments([]);
+    setError("Could not fetch attachments. Check console logs.");
+  }
+};
+
 
   useEffect(() => {
     loadTemplate();

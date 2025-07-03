@@ -155,7 +155,7 @@ const fetchAuthorities = async () => {
             <TableBody>
               {filteredAuthorities.map((authority) => (
                 <TableRow key={authority.id}>
-                  <TableCell className="font-medium">{authority.name}</TableCell>
+                  <TableCell className="font-medium text-center" dir="rtl">{authority.name}</TableCell>
                   <TableCell>{authority.email}</TableCell>
                   <TableCell>{authority.send_date ? `Day ${authority.send_date}` : "-"}</TableCell>
                   <TableCell>
@@ -173,7 +173,7 @@ const fetchAuthorities = async () => {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
+                   {/* <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => {
@@ -182,7 +182,7 @@ const fetchAuthorities = async () => {
                       }}
                     >
                       <SettingsIcon className="h-4 w-4" />
-                    </Button>
+                    </Button> */}
                     <Button
                       variant="ghost"
                       size="icon"
