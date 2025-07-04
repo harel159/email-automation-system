@@ -1,8 +1,9 @@
 // File: server.js
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
-import dotenv from 'dotenv';
 import session from 'express-session';
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
@@ -14,7 +15,7 @@ import CryptoJS from 'crypto-js';
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
 
 
-dotenv.config();
+
 
 const allowedUsers = [
   { id: 1, email: 'admin@roadprotect.co.il' },
