@@ -1,6 +1,5 @@
 // File: server.js
 import dotenv from 'dotenv';
-dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
@@ -11,6 +10,8 @@ import bcrypt from 'bcrypt';
 import clientRoutes from './routes/clientRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
 import CryptoJS from 'crypto-js';
+
+dotenv.config();
 
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
 
