@@ -142,6 +142,7 @@ export default function EmailManager() {
       await fetch(`${API_BASE_URL}/email/upload-attachment`, {
         method: "POST",
         body: formData,
+        credentials: 'include'
       });
       await loadAttachments();
       setSuccess(`File ${file.name} uploaded successfully!`);

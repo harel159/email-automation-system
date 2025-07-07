@@ -28,7 +28,10 @@ export default function ManualEmail() {
 
   const loadAuthorities = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/clients`);
+      const res = await fetch(`${API_BASE_URL}/clients`,
+        {
+      credentials: 'include'}
+      );
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Invalid response format");
       const valid = data.filter(item => item.name && item.email);
