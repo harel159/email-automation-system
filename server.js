@@ -15,9 +15,6 @@ dotenv.config();
 
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
 
-
-
-
 const allowedUsers = [
   { id: 1, email: 'admin@roadprotect.co.il' },
   { id: 2, email: 'muni@roadprotect.co.il' },
@@ -46,7 +43,6 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, (email, encryptedPass
   return done(null, user);
 }));
 
-
 passport.serializeUser((user, done) => done(null, user.email));
 passport.deserializeUser((email, done) => {
   const user = allowedUsers.find(u => u.email === email);
@@ -55,15 +51,13 @@ passport.deserializeUser((email, done) => {
 
 const app = express();
 
-// ========== SESSION & CORS ==========
+// ✅ ========== CORS ==========
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://185.229.226.173:3010'], // adjust if needed
+  origin: ['http://localhost:5173', 'http://185.229.226.173:3010'],
   credentials: true
 }));
 
-
-app.use(express.json());
-app.use(fileUpload());
+// ✅ ========== SESSION + PASSPORT ==========
 app.use(session({
   secret: process.env.SESSION_SECRET || 'super_secret',
   resave: false,
@@ -77,6 +71,11 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ✅ ========== BODY PARSING AFTER SESSION ==========
+app.use(express.json());
+app.use(fileUpload());
+
+// ========== AUTH CHECK ==========
 app.get('/api/check-auth', (req, res) => {
   if (req.isAuthenticated()) {
     res.json({ authenticated: true, user: req.user });
@@ -85,13 +84,11 @@ app.get('/api/check-auth', (req, res) => {
   }
 });
 
-
-// ========== BASIC ROUTES ==========
-
+// ========== STATIC FILES ==========
 app.use('/uploads', express.static('uploads'));
 app.use('/attachments', express.static('attachments'));
 
-// ========== LOGIN / LOGOUT ROUTES ==========
+// ========== LOGIN / LOGOUT ==========
 app.post('/api/login', passport.authenticate('local'), (req, res) => {
   res.json({ success: true, email: req.user.email });
 });
