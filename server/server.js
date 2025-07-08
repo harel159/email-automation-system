@@ -88,6 +88,7 @@ app.use('/attachments', express.static('attachments'));
 
 // ✅ AUTH ROUTES
 app.post('/api/login', passport.authenticate('local'), (req, res) => {
+  console.log('✅ Session after login:', req.sessionID); // ⬅️ ADD THIS
   res.json({ success: true, email: req.user.email });
 });
 
@@ -104,6 +105,10 @@ function requireLogin(req, res, next) {
 }
 
 app.use('/api/clients', requireLogin, clientRoutes);
+app.use('/api/email/send-all', (req, res, next) => {
+  console.log('📨 Session at /send-all:', req.sessionID); // ⬅️ ADD THIS
+  next();
+});
 app.use('/api/email', requireLogin, emailRoutes);
 
 // ✅ START SERVER
