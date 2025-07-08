@@ -14,6 +14,8 @@ import CryptoJS from 'crypto-js';
 dotenv.config();
 
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
+const SESSION_SECRET = process.env.SESSION_SECRET || 'super_secret';
+const passwordHash = process.env.SHARED_USER_PASSWORD_HASH;
 
 const allowedUsers = [
   { id: 1, email: 'admin@roadprotect.co.il' },
@@ -21,26 +23,21 @@ const allowedUsers = [
   { id: 3, email: 'harel@roadprotect.co.il' }
 ];
 
-const passwordHash = process.env.SHARED_USER_PASSWORD_HASH;
-
 // ========== AUTH STRATEGY ==========
 passport.use(new LocalStrategy({ usernameField: 'email' }, (email, encryptedPassword, done) => {
   const user = allowedUsers.find(u => u.email === email);
   if (!user) return done(null, false, { message: 'Invalid email' });
 
-  let decryptedPassword;
   try {
     const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_SECRET);
-    decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
-  } catch (e) {
+    const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
+    if (!bcrypt.compareSync(decryptedPassword, passwordHash)) {
+      return done(null, false, { message: 'Wrong password' });
+    }
+    return done(null, user);
+  } catch {
     return done(null, false, { message: 'Decryption failed' });
   }
-
-  if (!bcrypt.compareSync(decryptedPassword, passwordHash)) {
-    return done(null, false, { message: 'Wrong password' });
-  }
-
-  return done(null, user);
 }));
 
 passport.serializeUser((user, done) => done(null, user.email));
@@ -51,31 +48,32 @@ passport.deserializeUser((email, done) => {
 
 const app = express();
 
-// ✅ ========== CORS ==========
+// ✅ CORS FIRST
 app.use(cors({
   origin: ['http://localhost:5173', 'http://185.229.226.173:3010'],
   credentials: true
 }));
 
-// ✅ ========== SESSION + PASSPORT ==========
+// ✅ SESSION AND PASSPORT BEFORE BODY PARSING
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'super_secret',
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // true for HTTPS
+    secure: false, // true for HTTPS only
     httpOnly: true,
     sameSite: 'lax'
   }
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ✅ ========== BODY PARSING AFTER SESSION ==========
+// ✅ PARSERS AFTER SESSION
 app.use(express.json());
 app.use(fileUpload());
 
-// ========== AUTH CHECK ==========
+// ✅ CHECK AUTH ENDPOINT
 app.get('/api/check-auth', (req, res) => {
   if (req.isAuthenticated()) {
     res.json({ authenticated: true, user: req.user });
@@ -84,11 +82,11 @@ app.get('/api/check-auth', (req, res) => {
   }
 });
 
-// ========== STATIC FILES ==========
+// ✅ STATIC FILES
 app.use('/uploads', express.static('uploads'));
 app.use('/attachments', express.static('attachments'));
 
-// ========== LOGIN / LOGOUT ==========
+// ✅ AUTH ROUTES
 app.post('/api/login', passport.authenticate('local'), (req, res) => {
   res.json({ success: true, email: req.user.email });
 });
@@ -99,7 +97,7 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
-// ========== PROTECTED ROUTES ==========
+// ✅ PROTECTED ROUTES
 function requireLogin(req, res, next) {
   if (req.isAuthenticated()) return next();
   return res.status(401).json({ error: 'Unauthorized' });
@@ -108,6 +106,6 @@ function requireLogin(req, res, next) {
 app.use('/api/clients', requireLogin, clientRoutes);
 app.use('/api/email', requireLogin, emailRoutes);
 
-// ========== START SERVER ==========
+// ✅ START SERVER
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
