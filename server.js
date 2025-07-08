@@ -61,6 +61,9 @@ app.use(cors({
   credentials: true
 }));
 
+
+app.use(express.json());
+app.use(fileUpload());
 app.use(session({
   secret: process.env.SESSION_SECRET || 'super_secret',
   resave: false,
@@ -71,7 +74,6 @@ app.use(session({
     sameSite: 'lax'
   }
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -85,8 +87,7 @@ app.get('/api/check-auth', (req, res) => {
 
 
 // ========== BASIC ROUTES ==========
-app.use(express.json());
-app.use(fileUpload());
+
 app.use('/uploads', express.static('uploads'));
 app.use('/attachments', express.static('attachments'));
 
