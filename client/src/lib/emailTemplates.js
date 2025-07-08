@@ -11,7 +11,7 @@ const API_BASE = `${API_BASE_URL}/email/template`;
  */
 export async function getEmailTemplate() {
   const res = await axios.get(API_BASE, {
-    withCredentials: true, // ✅ Include session cookie
+    withCredentials: true, 
   });
   return res.data;
 }

@@ -27,13 +27,16 @@ export async function bulkCreateAuthorities(authorities) {
  */
 export async function getAuthorities() {
   try {
-    const res = await axios.get(BASE_URL_EMAIL);
+    const res = await axios.get(BASE_URL_EMAIL, {
+      withCredentials: true // ✅ include the session cookie
+    });
     return res.data || [];
   } catch (err) {
     console.error('❌ Failed to fetch authorities:', err.message);
     return [];
   }
 }
+
 
 /**
  * Create or update a single authority.
@@ -43,9 +46,11 @@ export async function getAuthorities() {
  */
 export async function saveAuthority(authority) {
   try {
+    const config = { withCredentials: true };
+
     const res = authority.id
-      ? await axios.put(`${BASE_URL_EMAIL}/${authority.id}`, authority)
-      : await axios.post(BASE_URL_EMAIL, authority);
+      ? await axios.put(`${BASE_URL_EMAIL}/${authority.id}`, authority, config)
+      : await axios.post(BASE_URL_EMAIL, authority, config);
 
     return res.data;
   } catch (err) {
@@ -53,6 +58,7 @@ export async function saveAuthority(authority) {
     return null;
   }
 }
+
 
 /**
  * Delete a single authority by ID.

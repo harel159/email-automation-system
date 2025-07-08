@@ -20,7 +20,10 @@ export async function sendEmail({ to, subject, body, from_name, reply_to, attach
     reply_to,
   },
     {
-      withCredentials: true 
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json' // ✅ Explicit for consistency
+      }
     
   });
 

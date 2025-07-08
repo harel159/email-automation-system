@@ -15,7 +15,8 @@ export async function uploadAttachmentFile(file) {
 
   try {
     const res = await axios.post(UPLOAD_ENDPOINT, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      withCredentials: true 
     });
     return res.data;
   } catch (err) {
