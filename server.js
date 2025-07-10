@@ -10,7 +10,7 @@ import bcrypt from 'bcrypt';
 import clientRoutes from './routes/clientRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
 import CryptoJS from 'crypto-js';
-
+import { sendBulkEmails } from './controllers/emailController.js';
 dotenv.config();
 
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
@@ -62,7 +62,7 @@ app.use(session({
   cookie: {
     secure: false, // true for HTTPS only
     httpOnly: true,
-    sameSite: 'false'
+    sameSite: 'lax'
   }
 }));
 
@@ -105,11 +105,16 @@ function requireLogin(req, res, next) {
 }
 
 app.use('/api/clients', requireLogin, clientRoutes);
-app.use('/api/email/send-all', (req, res, next) => {
-  console.log('📨 Session at /send-all:', req.sessionID); // ⬅️ ADD THIS
-  next();
-});
-app.use('/api/email', requireLogin, emailRoutes);
+//app.use('/api/email/send-all', (req, res, next) => {
+//  console.log('📨 Session at /send-all:', req.sessionID); // ⬅️ ADD THIS
+//  next();
+//});
+//app.use('/api/email', requireLogin, emailRoutes);
+
+
+app.post('/api/email/send-all', requireLogin, sendBulkEmails); // explicitly protected
+app.use('/api/email', requireLogin, emailRoutes); // remaining email routes
+
 
 // ✅ START SERVER
 const PORT = process.env.PORT || 5000;
