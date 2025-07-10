@@ -62,7 +62,7 @@ app.use(session({
   cookie: {
     secure: false, // true for HTTPS only
     httpOnly: true,
-    sameSite: 'lax'
+    sameSite: 'false'
   }
 }));
 

@@ -7,7 +7,7 @@ import { Loader2, Send, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/component/ui/alert";
 import { Badge } from "@/component/ui/badge";
 import FileUploader from "../template/FileUploader";
-import { sendEmail } from "@/lib/emailSender"; // ✅ Make sure this exists
+import { sendEmail } from "@/lib/emailSender"; 
 
 /**
  * EmailSender Component
