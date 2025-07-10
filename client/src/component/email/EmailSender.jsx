@@ -7,7 +7,7 @@ import { Loader2, Send, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/component/ui/alert";
 import { Badge } from "@/component/ui/badge";
 import FileUploader from "../template/FileUploader";
-import { SendEmail } from "@/lib/emailSender"; // ✅ Make sure this exists
+import { sendEmail } from "@/lib/emailSender"; // ✅ Make sure this exists
 
 /**
  * EmailSender Component
@@ -61,7 +61,7 @@ export default function EmailSender({ authorities = [] }) {
 
       // Send each email individually
       for (const email of selectedEmails) {
-        await SendEmail({
+        await sendEmail({
           to: email,
           subject,
           body,
