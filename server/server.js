@@ -111,6 +111,10 @@ app.use('/api/clients', requireLogin, clientRoutes);
 //});
 //app.use('/api/email', requireLogin, emailRoutes);
 
+app.use((req, res, next) => {
+  console.log('🧠 Session middleware:', req.sessionID, req.session);
+  next();
+});
 
 app.post('/api/email/send-all', requireLogin, sendBulkEmails); // explicitly protected
 app.use('/api/email', requireLogin, emailRoutes); // remaining email routes
