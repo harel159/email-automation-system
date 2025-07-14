@@ -12,13 +12,19 @@ import {API_BASE_URL} from "../config";
  * @param {Array<{file_name: string, file_url: string}>} [params.attachments] - Optional attachment list
  */
 export async function sendEmail({ to, subject, body, from_name, reply_to }) {
-  const res = await fetch(`${API_BASE_URL}/email/send-all`, {
+  const res = await fetch(`${API_BASE_URL}/email/send-all-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${import.meta.env.VITE_EMAIL_API_TOKEN}` // ✅ Use token
+      'Authorization': `Bearer ${import.meta.env.VITE_EMAIL_API_TOKEN}`
     },
-    body: JSON.stringify({ to: Array.isArray(to) ? to : [to], subject, body, from_name, reply_to }),
+    body: JSON.stringify({ 
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      body,
+      from_name,
+      reply_to
+    }),
   });
 
   if (!res.ok) {
