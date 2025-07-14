@@ -1,9 +1,9 @@
 import express from 'express';
-import { 
-  uploadAttachmentFile, 
-  sendTestEmail, 
-  sendBulkEmails, 
-  getEmailTemplate, 
+import {
+  uploadAttachmentFile,
+  sendTestEmail,
+  sendBulkEmails,
+  getEmailTemplate,
   saveEmailTemplate,
   listAttachments,
   verifyEmailApiToken
@@ -14,8 +14,14 @@ const router = express.Router();
 router.get('/attachments', listAttachments);
 router.post('/test-send', sendTestEmail);
 router.post('/upload-attachment', uploadAttachmentFile);
-router.get('/template', getEmailTemplate); 
+
+// ✅ For session-based dashboard
+router.post('/send-all', sendBulkEmails);
+
+// ✅ For token-based usage (external API, frontend with token)
+router.post('/send-all-token', verifyEmailApiToken, sendBulkEmails);
+
+router.get('/template', getEmailTemplate);
 router.post('/template', saveEmailTemplate);
-router.post('/send-all', verifyEmailApiToken, sendBulkEmails);
 
 export default router;
