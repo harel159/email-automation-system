@@ -16,20 +16,14 @@ export async function sendEmail({ to, subject, body, from_name, reply_to }) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer rVc2BgX7YlplokSK0HtNb5ZGJTyhxERb` // ✅ Use your token
+      'Authorization': `Bearer ${import.meta.env.VITE_EMAIL_API_TOKEN}` // ✅ Use token
     },
-    body: JSON.stringify({
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      body,
-      from_name,
-      reply_to
-    })
+    body: JSON.stringify({ to: Array.isArray(to) ? to : [to], subject, body, from_name, reply_to }),
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to send email');
+    const err = await res.text();
+    throw new Error(`Send failed: ${err}`);
   }
 
   return res.json();

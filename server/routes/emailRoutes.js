@@ -9,13 +9,11 @@ import {
   verifyEmailApiToken
 } from '../controllers/emailController.js';
 
-
 const router = express.Router();
 
-router.get('/attachments', listAttachments)
+router.get('/attachments', listAttachments);
 router.post('/test-send', sendTestEmail);
 router.post('/upload-attachment', uploadAttachmentFile);
-router.post('/send-all', sendBulkEmails);
 router.get('/template', getEmailTemplate); 
 router.post('/template', saveEmailTemplate);
 router.post('/send-all', verifyEmailApiToken, sendBulkEmails);
