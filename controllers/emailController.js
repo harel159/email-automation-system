@@ -141,6 +141,23 @@ export async function sendBulkEmails(req, res) {
   res.json({ success: true, results });
 }
 
+
+//=================Token Middleware======================//
+
+
+export function verifyEmailApiToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
+
+  if (!token || token !== process.env.EMAIL_API_TOKEN) {
+    console.error('❌ Invalid or missing API token');
+    return res.status(401).json({ error: 'Invalid API token' });
+  }
+
+  next();
+}
+
+
 // ========= Get Email Template ========= //
 export async function getEmailTemplate(req, res) {
   try {
