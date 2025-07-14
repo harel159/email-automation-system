@@ -5,8 +5,10 @@ import {
   sendBulkEmails, 
   getEmailTemplate, 
   saveEmailTemplate,
-  listAttachments
+  listAttachments,
+  verifyEmailApiToken
 } from '../controllers/emailController.js';
+
 
 const router = express.Router();
 
@@ -16,5 +18,6 @@ router.post('/upload-attachment', uploadAttachmentFile);
 router.post('/send-all', sendBulkEmails);
 router.get('/template', getEmailTemplate); 
 router.post('/template', saveEmailTemplate);
+router.post('/send-all', verifyEmailApiToken, sendBulkEmails);
 
 export default router;

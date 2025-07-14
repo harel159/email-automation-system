@@ -14,12 +14,12 @@ import {API_BASE_URL} from "../config";
 export async function sendEmail({ to, subject, body, from_name, reply_to }) {
   const res = await fetch(`${API_BASE_URL}/email/send-all`, {
     method: 'POST',
-    credentials: 'include', // ✅ Critical
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer rVc2BgX7YlplokSK0HtNb5ZGJTyhxERb` // ✅ Use your token
     },
     body: JSON.stringify({
-      to,
+      to: Array.isArray(to) ? to : [to],
       subject,
       body,
       from_name,
@@ -28,8 +28,8 @@ export async function sendEmail({ to, subject, body, from_name, reply_to }) {
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error || 'Failed to send email');
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to send email');
   }
 
   return res.json();
