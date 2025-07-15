@@ -18,8 +18,7 @@ router.post('/upload-attachment', uploadAttachmentFile);
 // ✅ For session-based dashboard
 router.post('/send-all', sendBulkEmails);
 
-// ✅ For token-based usage (external API, frontend with token)
-router.post('/send-all-token', verifyEmailApiToken, sendBulkEmails);
+
 
 router.get('/template', getEmailTemplate);
 router.post('/template', saveEmailTemplate);
