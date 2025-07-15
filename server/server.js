@@ -7,10 +7,12 @@ import session from 'express-session';
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import bcrypt from 'bcrypt';
+import CryptoJS from 'crypto-js';
+
 import clientRoutes from './routes/clientRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
-import CryptoJS from 'crypto-js';
-import { sendBulkEmails } from './controllers/emailController.js';
+import { sendBulkEmails, verifyEmailApiToken } from './controllers/emailController.js';
+
 dotenv.config();
 
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
@@ -73,22 +75,13 @@ app.use(passport.session());
 app.use(express.json());
 app.use(fileUpload());
 
-// ✅ CHECK AUTH ENDPOINT
-app.get('/api/check-auth', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.json({ authenticated: true, user: req.user });
-  } else {
-    res.status(401).json({ authenticated: false });
-  }
-});
-
 // ✅ STATIC FILES
 app.use('/uploads', express.static('uploads'));
 app.use('/attachments', express.static('attachments'));
 
-// ✅ AUTH ROUTES
+// ✅ LOGIN / LOGOUT
 app.post('/api/login', passport.authenticate('local'), (req, res) => {
-  console.log('✅ Session after login:', req.sessionID); // ⬅️ ADD THIS
+  console.log('✅ Session after login:', req.sessionID);
   res.json({ success: true, email: req.user.email });
 });
 
@@ -98,27 +91,30 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
-// ✅ PROTECTED ROUTES
+// ✅ CHECK AUTH
+app.get('/api/check-auth', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ authenticated: true, user: req.user });
+  } else {
+    res.status(401).json({ authenticated: false });
+  }
+});
+
+// ✅ PROTECTED ROUTE WRAPPER
 function requireLogin(req, res, next) {
   if (req.isAuthenticated()) return next();
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
+// ✅ ROUTES SETUP
+
+// 🔓 Public API token route (bypass session)
+app.post('/api/email/send-all-token', verifyEmailApiToken, sendBulkEmails);
+
+// 🔒 Session-protected routes
+app.post('/api/email/send-all', requireLogin, sendBulkEmails);
+app.use('/api/email', requireLogin, emailRoutes);
 app.use('/api/clients', requireLogin, clientRoutes);
-//app.use('/api/email/send-all', (req, res, next) => {
-//  console.log('📨 Session at /send-all:', req.sessionID); // ⬅️ ADD THIS
-//  next();
-//});
-//app.use('/api/email', requireLogin, emailRoutes);
-
-app.use((req, res, next) => {
-  console.log('🧠 Session middleware:', req.sessionID, req.session);
-  next();
-});
-
-app.post('/api/email/send-all', requireLogin, sendBulkEmails); // explicitly protected
-app.use('/api/email', requireLogin, emailRoutes); // remaining email routes
-
 
 // ✅ START SERVER
 const PORT = process.env.PORT || 5000;
