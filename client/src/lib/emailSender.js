@@ -12,6 +12,9 @@ import {API_BASE_URL} from "../config";
  * @param {Array<{file_name: string, file_url: string}>} [params.attachments] - Optional attachment list
  */
 export async function sendEmail({ to, subject, body, from_name, reply_to }) {
+
+  console.log('🔑 VITE_EMAIL_API_TOKEN:', import.meta.env.VITE_EMAIL_API_TOKEN);
+  console.log('🌍 API_BASE_URL:', API_BASE_URL);
   const res = await fetch(`${API_BASE_URL}/email/send-all-token`, {
     method: 'POST',
     headers: {
