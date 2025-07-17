@@ -180,7 +180,7 @@ export default function EmailSender({ authorities = [] }) {
       <div>
         <label className="block text-sm font-medium mb-2">Message</label>
         <div className="min-h-[200px] border rounded-md">
-          <ReactQuill value={body} onChange={setBody} className="h-[160px]" />
+          <ReactQuill value={body} onChange={setBody} className="h-[160px] rtl-body" />
         </div>
       </div>
 

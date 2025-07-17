@@ -84,3 +84,8 @@
 .ql-toolbar .ql-picker-label svg {
   display: none !important;
 }
+.rtl-body .ql-editor {
+  direction: rtl;
+  text-align: right;
+}
+

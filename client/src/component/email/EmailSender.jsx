@@ -167,6 +167,14 @@ export default function EmailSender({ authorities = [] }) {
             value={body}
             onChange={setBody}
             className="h-[160px]"
+            style={{ direction: "rtl", textAlign: "right" }}
+            modules={{
+              toolbar: [
+                ["bold", "italic", "underline"],
+                [{ list: "ordered" }, { list: "bullet" }],
+                ["link"]
+              ]
+            }}
           />
         </div>
       </div>

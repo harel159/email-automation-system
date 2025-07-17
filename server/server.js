@@ -21,14 +21,16 @@ const passwordHash = process.env.SHARED_USER_PASSWORD_HASH;
 
 const allowedUsers = [
   { id: 1, email: 'admin@roadprotect.co.il' },
-  { id: 2, email: 'muni@roadprotect.co.il' },
-  { id: 3, email: 'harel@roadprotect.co.il' }
+  { id: 2, email: 'shai@roadprotect.co.il' },
+  { id: 3, email: 'muni@roadprotect.co.il' },
+  { id: 4, email: 'harel@roadprotect.co.il' }
 ];
 
 // ========== AUTH STRATEGY ==========
 passport.use(new LocalStrategy({ usernameField: 'email' }, (email, encryptedPassword, done) => {
-  const user = allowedUsers.find(u => u.email === email);
-  if (!user) return done(null, false, { message: 'Invalid email' });
+  const normalizedEmail = email.toLowerCase();
+const user = allowedUsers.find(u => u.email.toLowerCase() === normalizedEmail);
+ if (!user) return done(null, false, { message: 'Invalid email' });
 
   try {
     const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_SECRET);
@@ -44,7 +46,8 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, (email, encryptedPass
 
 passport.serializeUser((user, done) => done(null, user.email));
 passport.deserializeUser((email, done) => {
-  const user = allowedUsers.find(u => u.email === email);
+  const normalizedEmail = email.toLowerCase();
+  const user = allowedUsers.find(u => u.email.toLowerCase() === normalizedEmail);
   done(null, user || false);
 });
 
@@ -53,6 +56,8 @@ const app = express();
 // ✅ CORS FIRST
 app.use(cors({
   origin: ['http://localhost:5173', 'http://185.229.226.173:3010'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 

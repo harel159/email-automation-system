@@ -239,7 +239,7 @@ export default function EmailManager() {
                     theme="snow"
                     value={template.body}
                     onChange={(value) => setTemplate(prev => ({ ...prev, body: value }))}
-                    className="h-[360px]"
+                    className="h-[360px] rtl-body"
                   />
                 </div>
               </div>
