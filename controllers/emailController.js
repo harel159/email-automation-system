@@ -67,7 +67,7 @@ export async function sendTestEmail(req, res) {
     });
 
     await transporter.sendMail({
-      from: `"${from_name || 'Road'}" <${process.env.EMAIL_USER}>`,
+      from: `"${from_name || 'Road Protect'}" <${process.env.EMAIL_USER}>`,
       to,
       subject: subject || "No subject",
       html: body || "<p>No content provided.</p>",
@@ -117,7 +117,7 @@ export async function sendBulkEmails(req, res) {
   for (const email of to) {
     try {
       await transporter.sendMail({
-        from: `"${from_name || 'Road'}" <${process.env.EMAIL_USER}>`,
+        from: `"${from_name || 'Road Protect'}" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: subject || "No subject",
         html: body || "<p>No content provided.</p>",
