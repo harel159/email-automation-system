@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
-  FileText, LayoutDashboard, Menu, X,
-  Settings, Mail, Send
+  FileText, LayoutDashboard, Menu, X, Mail, Send
 } from "lucide-react";
 import { Button } from "@/component/ui/button";
 import { cn } from "@/lib/utils";
@@ -72,10 +71,6 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </div>
 
-          {/* Settings section */}
-          <div className="mt-6 pt-6 border-t">
-            <NavLink label="Settings" icon={Settings} active={isActive("Settings")} setSidebarOpen={setSidebarOpen} />
-          </div>
         </nav>
       </aside>
 

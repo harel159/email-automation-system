@@ -6,8 +6,6 @@ import Template from "./Template.jsx";
 
 import History from "./History.jsx";
 
-import Settings from "./Settings.jsx";
-
 import EmailManager from "./EmailManager";
 
 import ManualEmail from "./ManualEmail.jsx";
@@ -25,8 +23,6 @@ const PAGES = {
     Template: Template,
     
     History: History,
-    
-    Settings: Settings,
     
     EmailManager: EmailManager,
     
@@ -82,11 +78,6 @@ function PagesContent() {
           </RequireAuth>
         } />
 
-        <Route path="/Settings" element={
-          <RequireAuth>
-            <Settings />
-          </RequireAuth>
-        } />
 
         <Route path="/EmailManager" element={
           <RequireAuth>
