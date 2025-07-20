@@ -53,24 +53,24 @@ export async function sendTestEmail(req, res) {
     path: file.path
   }));
 
-  console.log("📎 Sending with server-side attachments:", attachments);
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const rtlBody = `<div dir="rtl" style="text-align:right; font-family:Arial, sans-serif;">${body}</div>`;
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
     await transporter.sendMail({
       from: `"${from_name || 'Road Protect'}" <${process.env.EMAIL_USER}>`,
       to,
       subject: subject || "No subject",
-      html: body || "<p>No content provided.</p>",
+      html: rtlBody,
       replyTo: reply_to || undefined,
       attachments
     });
@@ -81,6 +81,7 @@ export async function sendTestEmail(req, res) {
     res.status(500).json({ success: false, error: err.message });
   }
 }
+
 
 // ========= Send Bulk Emails ========= //
 export async function sendBulkEmails(req, res) {
@@ -95,7 +96,6 @@ export async function sendBulkEmails(req, res) {
   if (typeof body !== 'string' || body.trim() === "") {
     return res.status(400).json({ error: "Invalid 'body'. Must be a non-empty string." });
   }
-
 
   const attachments = getAllAttachments().map(file => ({
     filename: file.name,
@@ -112,6 +112,8 @@ export async function sendBulkEmails(req, res) {
     },
   });
 
+  const rtlBody = `<div dir="rtl" style="text-align:right; font-family:Arial, sans-serif;">${body}</div>`;
+
   const results = [];
 
   for (const email of to) {
@@ -120,17 +122,17 @@ export async function sendBulkEmails(req, res) {
         from: `"${from_name || 'Road Protect'}" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: subject || "No subject",
-        html: body || "<p>No content provided.</p>",
+        html: rtlBody,
         replyTo: reply_to || undefined,
         attachments
       });
-  
+
       // ✅ Update latestInfoDate in the DB
       await pool.query(
         'UPDATE issuer SET "latestInfoDate" = NOW() WHERE email = $1',
         [email]
       );
-  
+
       results.push({ to: email, success: true });
     } catch (err) {
       console.error(`❌ Failed to send to ${email}:`, err);
@@ -140,6 +142,7 @@ export async function sendBulkEmails(req, res) {
 
   res.json({ success: true, results });
 }
+
 
 
 //=================Token Middleware======================//
