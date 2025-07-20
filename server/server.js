@@ -23,7 +23,8 @@ const allowedUsers = [
   { id: 1, email: 'admin@roadprotect.co.il' },
   { id: 2, email: 'shai@roadprotect.co.il' },
   { id: 3, email: 'muni@roadprotect.co.il' },
-  { id: 4, email: 'harel@roadprotect.co.il' }
+  { id: 4, email: 'harel@roadprotect.co.il' },
+  { id: 5, email: 'ERAN@ROADPROTECT.CO.IL'}
 ];
 
 // ========== AUTH STRATEGY ==========
