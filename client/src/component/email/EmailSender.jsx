@@ -7,12 +7,12 @@ import { Loader2, Send, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/component/ui/alert";
 import { Badge } from "@/component/ui/badge";
 import FileUploader from "../template/FileUploader";
-import { sendEmail } from "@/lib/emailSender"; 
+import { sendEmail } from "@/lib/emailSender";
 
 /**
  * EmailSender Component
  * Handles manual email sending with subject, message, attachments, and recipient selection.
- * 
+ *
  * @param {Object[]} authorities - List of all available authorities { id, name, email }
  */
 export default function EmailSender({ authorities = [] }) {
@@ -20,11 +20,12 @@ export default function EmailSender({ authorities = [] }) {
   const [body, setBody] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [selectedAuthorities, setSelectedAuthorities] = useState([]);
+  const [fromName, setFromName] = useState("");
+  const [replyTo, setReplyTo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  /** Toggle selection of authority by ID */
   const handleSelectAuthority = (authorityId) => {
     setSelectedAuthorities((prev) =>
       prev.includes(authorityId)
@@ -33,47 +34,48 @@ export default function EmailSender({ authorities = [] }) {
     );
   };
 
-  /** Remove authority from selected list */
   const handleRemoveAuthority = (authorityId) => {
     setSelectedAuthorities((prev) =>
       prev.filter(id => id !== authorityId)
     );
   };
 
-  /** Trigger email sending */
   const handleSendEmail = async () => {
     setError(null);
     setSuccess(null);
 
     if (!subject.trim() || !body.trim()) {
-      return setError("Please fill in both subject and body");
+      return setError("Please fill in both subject and body.");
     }
 
     if (selectedAuthorities.length === 0) {
-      return setError("Please select at least one recipient");
+      return setError("Please select at least one recipient.");
     }
 
     setLoading(true);
     try {
-      const selectedEmails = authorities
-        .filter(auth => selectedAuthorities.includes(auth.id))
-        .map(auth => auth.email);
+      const selectedList = authorities.filter(auth =>
+        selectedAuthorities.includes(auth.id)
+      );
 
-      // Send each email individually
-      for (const email of selectedEmails) {
+      for (const auth of selectedList) {
+        const dynamicSubject = `${subject} – ${auth.name}`;
         await sendEmail({
-          to: email,
-          subject,
+          to: [{ email: auth.email, name: auth.name }],
+          subject: dynamicSubject,
           body,
-          from_name:fromName
+          from_name: fromName,
+          reply_to: replyTo
         });
       }
 
-      setSuccess(`Email sent to ${selectedEmails.length} recipient(s).`);
+      setSuccess(`Email sent to ${selectedList.length} recipient(s).`);
       setSubject("");
       setBody("");
       setAttachments([]);
       setSelectedAuthorities([]);
+      setFromName("");
+      setReplyTo("");
     } catch (err) {
       console.error("Email send error:", err);
       setError("Failed to send email. Please try again.");
@@ -147,6 +149,26 @@ export default function EmailSender({ authorities = [] }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* From Name */}
+      <div>
+        <label className="block text-sm font-medium mb-2">From Name</label>
+        <Input
+          value={fromName}
+          onChange={(e) => setFromName(e.target.value)}
+          placeholder="e.g. Road Protect"
+        />
+      </div>
+
+      {/* Reply-To */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Reply-To Address</label>
+        <Input
+          value={replyTo}
+          onChange={(e) => setReplyTo(e.target.value)}
+          placeholder="e.g. support@roadprotect.com"
+        />
       </div>
 
       {/* Subject */}
