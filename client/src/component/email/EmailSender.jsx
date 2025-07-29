@@ -48,48 +48,51 @@ export default function EmailSender({ authorities = [] }) {
   };
 
   const handleSendEmail = async () => {
-    setError(null);
-    setSuccess(null);
+  setError(null);
+  setSuccess(null);
 
-    if (!subject.trim() || !body.trim()) {
-      return setError("Please fill in both subject and body.");
-    }
+  if (!subject.trim() || !body.trim()) {
+    return setError("Please fill in both subject and body.");
+  }
 
-    if (selectedAuthorities.length === 0) {
-      return setError("Please select at least one recipient.");
-    }
+  if (selectedAuthorities.length === 0) {
+    return setError("Please select at least one recipient.");
+  }
 
-    setLoading(true);
-    try {
-      const selectedList = authorities.filter(auth =>
-        selectedAuthorities.includes(auth.id)
-      );
+  setLoading(true);
+  try {
+    const selectedList = authorities.filter(auth =>
+      selectedAuthorities.includes(auth.id)
+    );
 
-      for (const auth of selectedList) {
-        const dynamicSubject = `${subject} – ${auth.name}`;
-        await sendEmail({
-          to: [{ email: auth.email, name: auth.name }],
-          subject: dynamicSubject,
-          body,
-          from_name: fromName,
-          reply_to: replyTo
-        });
-      }
+    const toList = selectedList.map(auth => ({
+      email: auth.email,
+      name: auth.name
+    }));
 
-      setSuccess(`Email sent to ${selectedList.length} recipient(s).`);
-      setSubject("");
-      setBody("");
-      setAttachments([]);
-      setSelectedAuthorities([]);
-      setFromName("");
-      setReplyTo("");
-    } catch (err) {
-      console.error("❌ Email send error:", err);
-      setError("Failed to send email. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    await sendEmail({
+      to: toList,
+      subject,
+      body,
+      from_name: fromName,
+      reply_to: replyTo
+    });
+
+    setSuccess(`Email sent to ${selectedList.length} recipient(s).`);
+    setSubject("");
+    setBody("");
+    setAttachments([]);
+    setSelectedAuthorities([]);
+    setFromName("");
+    setReplyTo("");
+  } catch (err) {
+    console.error("❌ Email send error:", err);
+    setError("Failed to send email. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="space-y-6">
