@@ -2,19 +2,25 @@ import React, { useState } from 'react';
 import { Button } from "@/component/ui/button";
 import { Input } from "@/component/ui/input";
 import ReactQuill from "react-quill";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/component/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/component/ui/popover";
 import { Checkbox } from "@/component/ui/checkbox";
-import { Loader2, Send, X } from "lucide-react";
+import { Loader2, ChevronsUpDown, Send, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/component/ui/alert";
 import { Badge } from "@/component/ui/badge";
 import FileUploader from "../template/FileUploader";
 import { sendEmail } from "@/lib/emailSender";
 
-/**
- * EmailSender Component
- * Handles manual email sending with subject, message, attachments, and recipient selection.
- *
- * @param {Object[]} authorities - List of all available authorities { id, name, email }
- */
 export default function EmailSender({ authorities = [] }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -25,12 +31,13 @@ export default function EmailSender({ authorities = [] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const handleSelectAuthority = (authorityId) => {
-    setSelectedAuthorities((prev) =>
-      prev.includes(authorityId)
-        ? prev.filter(id => id !== authorityId)
-        : [...prev, authorityId]
+  const handleToggleAuthority = (authorityId) => {
+    setSelectedAuthorities((current) =>
+      current.includes(authorityId)
+        ? current.filter((id) => id !== authorityId)
+        : [...current, authorityId]
     );
   };
 
@@ -77,7 +84,7 @@ export default function EmailSender({ authorities = [] }) {
       setFromName("");
       setReplyTo("");
     } catch (err) {
-      console.error("Email send error:", err);
+      console.error("❌ Email send error:", err);
       setError("Failed to send email. Please try again.");
     } finally {
       setLoading(false);
@@ -86,7 +93,7 @@ export default function EmailSender({ authorities = [] }) {
 
   return (
     <div className="space-y-6">
-      {/* Notifications */}
+      {/* Error / Success */}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -98,57 +105,60 @@ export default function EmailSender({ authorities = [] }) {
         </Alert>
       )}
 
-      {/* Recipients */}
+      {/* Recipients Dropdown */}
       <div>
         <label className="block text-sm font-medium mb-2">Recipients</label>
-        <div className="space-y-4">
-          <div className="max-h-[200px] overflow-auto border rounded-md p-2">
-            {authorities.length === 0 ? (
-              <p className="text-center text-gray-500 p-4">
-                No authorities available
-              </p>
-            ) : (
-              authorities.map(authority => (
-                <div
-                  key={authority.id}
-                  className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
-                >
-                  <Checkbox
-                    id={`authority-${authority.id}`}
-                    checked={selectedAuthorities.includes(authority.id)}
-                    onCheckedChange={() => handleSelectAuthority(authority.id)}
-                  />
-                  <label
-                    htmlFor={`authority-${authority.id}`}
-                    className="flex-1 flex justify-between cursor-pointer"
+        <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              {selectedAuthorities.length > 0
+                ? `${selectedAuthorities.length} selected`
+                : "Select recipients..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[400px] p-0">
+            <Command>
+              <CommandInput placeholder="Search authorities..." />
+              <CommandEmpty>No authority found.</CommandEmpty>
+              <CommandGroup className="max-h-[300px] overflow-auto">
+                {authorities.map((auth) => (
+                  <CommandItem
+                    key={auth.id}
+                    onSelect={() => handleToggleAuthority(auth.id)}
+                    className="flex items-center gap-2"
                   >
-                    <span>{authority.name}</span>
-                    <span className="text-gray-500 text-sm">{authority.email}</span>
-                  </label>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Selected Badges */}
-          {selectedAuthorities.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {authorities
-                .filter(auth => selectedAuthorities.includes(auth.id))
-                .map(auth => (
-                  <Badge key={auth.id} variant="secondary" className="flex items-center gap-1">
-                    {auth.name}
-                    <button
-                      onClick={() => handleRemoveAuthority(auth.id)}
-                      className="ml-1 rounded-full hover:bg-gray-200 p-0.5"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
+                    <Checkbox
+                      checked={selectedAuthorities.includes(auth.id)}
+                      className="h-4 w-4"
+                    />
+                    <span>{auth.name}</span>
+                    <span className="text-xs text-gray-500 ml-auto">{auth.email}</span>
+                  </CommandItem>
                 ))}
-            </div>
-          )}
-        </div>
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+
+        {/* Selected Badges */}
+        {selectedAuthorities.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {authorities
+              .filter((auth) => selectedAuthorities.includes(auth.id))
+              .map((auth) => (
+                <Badge
+                  key={auth.id}
+                  variant="secondary"
+                  className="cursor-pointer"
+                  onClick={() => handleRemoveAuthority(auth.id)}
+                >
+                  {auth.name}
+                  <X className="ml-1 h-3 w-3" />
+                </Badge>
+              ))}
+          </div>
+        )}
       </div>
 
       {/* From Name */}
@@ -181,7 +191,7 @@ export default function EmailSender({ authorities = [] }) {
         />
       </div>
 
-      {/* Body */}
+      {/* Message */}
       <div>
         <label className="block text-sm font-medium mb-2">Message</label>
         <div className="min-h-[200px] border rounded-md">

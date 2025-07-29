@@ -87,8 +87,9 @@ export async function sendTestEmail(req, res) {
 export async function sendBulkEmails(req, res) {
   const { to = [], subject, body, from_name, reply_to } = req.body;
 
-  if (!Array.isArray(to) || to.length === 0 || to.some(email => typeof email !== 'string')) {
-    return res.status(400).json({ error: "Invalid 'to' field. Must be a non-empty array of strings." });
+  // ✅ Updated validation: to = [{email, name}]
+  if (!Array.isArray(to) || to.length === 0 || to.some(r => !r.email || typeof r.email !== 'string')) {
+    return res.status(400).json({ error: "Invalid 'to' field. Must be a non-empty array of { email, name }." });
   }
   if (typeof subject !== 'string' || subject.trim() === "") {
     return res.status(400).json({ error: "Invalid 'subject'. Must be a non-empty string." });
@@ -116,32 +117,38 @@ export async function sendBulkEmails(req, res) {
 
   const results = [];
 
-  for (const email of to) {
+  for (const recipient of to) {
+    const recipientEmail = recipient.email;
+    const recipientName = recipient.name || "";
+
+    const personalizedSubject = `${subject} – ${recipientName}`;
+
     try {
       await transporter.sendMail({
         from: `"${from_name || 'Road Protect'}" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: subject || "No subject",
+        to: recipientEmail,
+        subject: personalizedSubject,
         html: rtlBody,
         replyTo: reply_to || undefined,
         attachments
       });
 
-      // ✅ Update latestInfoDate in the DB
+      // ✅ Update latestInfoDate
       await pool.query(
         'UPDATE issuer SET "latestInfoDate" = NOW() WHERE email = $1',
-        [email]
+        [recipientEmail]
       );
 
-      results.push({ to: email, success: true });
+      results.push({ to: recipientEmail, success: true });
     } catch (err) {
-      console.error(`❌ Failed to send to ${email}:`, err);
-      results.push({ to: email, success: false, error: err.message });
+      console.error(`❌ Failed to send to ${recipientEmail}:`, err);
+      results.push({ to: recipientEmail, success: false, error: err.message });
     }
   }
 
   res.json({ success: true, results });
 }
+
 
 
 
