@@ -69,6 +69,8 @@ export default function EmailSender({ authorities = [] }) {
       email: auth.email,
       name: auth.name
     }));
+    console.log("📨 Debug - toList content:", toList);
+
 
     await sendEmail({
       to: toList,
