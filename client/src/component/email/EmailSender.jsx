@@ -61,6 +61,8 @@ export default function EmailSender({ authorities = [] }) {
 
   setLoading(true);
   try {
+    console.log("👥 Authorities:", authorities);
+    console.log("✅ Selected Authority IDs:", selectedAuthorities);
     const selectedList = authorities.filter(auth =>
       selectedAuthorities.includes(auth.id)
     );
@@ -70,6 +72,7 @@ export default function EmailSender({ authorities = [] }) {
       name: auth.name
     }));
     console.log("📨 Debug - toList content:", toList);
+    console.log("🧪 Final 'to' before send:", JSON.stringify(toList, null, 2));
 
 
     await sendEmail({
