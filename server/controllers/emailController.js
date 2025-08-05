@@ -121,7 +121,7 @@ export async function sendBulkEmails(req, res) {
     const recipientEmail = recipient.email;
     const recipientName = recipient.name || "";
 
-    const personalizedSubject = `${subject} – ${recipientName}`;
+    const personalizedSubject = `${subject} ${recipientName}`;
 
     try {
       await transporter.sendMail({

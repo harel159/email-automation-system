@@ -125,10 +125,6 @@ export default function EmailManager() {
           name: auth.name
         }));
 
-      // Debug logs
-      console.log("📥 Authorities:", authorities);
-      console.log("✅ testEmail (emails):", testEmail);
-      console.log("📤 Final Recipients Array:", recipients);
 
       await sendEmail({
         to: recipients,
