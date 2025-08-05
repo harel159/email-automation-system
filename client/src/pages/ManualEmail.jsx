@@ -65,18 +65,22 @@ export default function ManualEmail() {
     setSuccess(null);
 
     try {
-      const selectedEmails = authorities
+      const selectedRecipients = authorities
         .filter(auth => selectedAuthorities.includes(auth.id))
-        .map(auth => auth.email);
+        .map(auth => ({
+          email: auth.email,
+          name: auth.name
+        }));
 
       await sendEmail({
-        to: selectedEmails,
+        to: selectedRecipients,
         subject,
         body,
         attachments,
         from_name: fromName,
         reply_to: replyTo
       });
+
 
       setSuccess(`Email sent successfully to ${selectedEmails.length} recipient(s)`);
     } catch (err) {
