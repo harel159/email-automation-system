@@ -112,22 +112,33 @@ export default function EmailManager() {
       setSending(true);
       setError(null);
       setSuccess(null);
+
       if (!template.subject || !template.body || testEmail.length === 0) {
         throw new Error("Please fill subject, body, and select recipients.");
       }
+
+      // Build recipients array (currently testEmail holds emails, not IDs)
+      const recipients = authorities
+        .filter(auth => testEmail.includes(auth.email))
+        .map(auth => ({
+          email: auth.email,
+          name: auth.name
+        }));
+
+      // Debug logs
       console.log("📥 Authorities:", authorities);
-      console.log("✅ testEmail:", testEmail);
-      console.log("📤 Final Recipients Array:", recipients);  
+      console.log("✅ testEmail (emails):", testEmail);
+      console.log("📤 Final Recipients Array:", recipients);
+
       await sendEmail({
-        to: authorities
-          .filter(auth => testEmail.includes(auth.email))
-          .map(auth => ({ email: auth.email, name: auth.name })), 
+        to: recipients,
         subject: template.subject,
         body: template.body,
         attachments: template.attachments,
         from_name: template.from_name,
         reply_to: template.reply_to,
       });
+
       setSuccess("Email sent successfully!");
     } catch (err) {
       console.error("Send error:", err);
@@ -136,6 +147,8 @@ export default function EmailManager() {
       setSending(false);
     }
   };
+
+
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
