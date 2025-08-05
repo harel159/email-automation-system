@@ -115,8 +115,13 @@ export default function EmailManager() {
       if (!template.subject || !template.body || testEmail.length === 0) {
         throw new Error("Please fill subject, body, and select recipients.");
       }
+      console.log("📥 Authorities:", authorities);
+      console.log("✅ testEmail:", testEmail);
+      console.log("📤 Final Recipients Array:", recipients);  
       await sendEmail({
-        to: testEmail,
+        to: authorities
+          .filter(auth => testEmail.includes(auth.email))
+          .map(auth => ({ email: auth.email, name: auth.name })), 
         subject: template.subject,
         body: template.body,
         attachments: template.attachments,
