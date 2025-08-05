@@ -81,8 +81,7 @@ export default function ManualEmail() {
         reply_to: replyTo
       });
 
-
-      setSuccess(`Email sent successfully to ${selectedEmails.length} recipient(s)`);
+      setSuccess(`Email sent successfully to ${selectedRecipients.length} recipient(s)`);
     } catch (err) {
       console.error("Send email error:", err);
       setError(err.message || "Failed to send email.");
@@ -91,13 +90,6 @@ export default function ManualEmail() {
     }
   };
 
-  const handleSelectAuthority = (authorityId) => {
-    if (selectedAuthorities.includes(authorityId)) {
-      setSelectedAuthorities(selectedAuthorities.filter(id => id !== authorityId));
-    } else {
-      setSelectedAuthorities([...selectedAuthorities, authorityId]);
-    }
-  };
 
   const handleRemoveAuthority = (authorityId) => {
     setSelectedAuthorities(selectedAuthorities.filter(id => id !== authorityId));
