@@ -41,6 +41,34 @@ export default function EmailManager() {
     }
   }, []);
 
+  const handleDeleteAttachment = async (filename) => {
+  if (!confirm(`Delete attachment: ${filename}?`)) return;
+  try {
+    const res = await fetch(`${API_BASE_URL}/email/attachments/delete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_EMAIL_API_TOKEN}`
+      },
+      body: JSON.stringify({ filename })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      setSuccess(`Attachment ${filename} deleted successfully.`);
+      await loadAttachments(); // 🔄 Reload list from server
+    } else {
+      setError(data.error || "Failed to delete attachment.");
+    }
+  } catch (err) {
+    console.error("❌ Delete error:", err);
+    setError("Failed to delete attachment.");
+  }
+};
+
+
+
+
   const loadAttachments = async () => {
   try {
     console.log("📥 Fetching attachments from:", `${API_BASE_URL}/email/attachments`);
@@ -308,12 +336,21 @@ export default function EmailManager() {
             ) : (
               <ul className="space-y-2">
                 {serverAttachments.map((file, idx) => (
-                  <li key={idx} className="flex justify-between border rounded p-2">
-                    <span>{file.name}</span>
-                    <span className="text-gray-400 text-sm">{file.sizeKB} KB</span>
+                  <li key={idx} className="flex justify-between items-center border rounded p-2">
+                    <div>
+                      <span className="font-medium">{file.name}</span>
+                      <span className="text-gray-400 text-sm ml-2">{file.sizeKB} KB</span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteAttachment(file.name)}
+                      className="text-red-500 hover:underline"
+                    >
+                      ❌
+                    </button>
                   </li>
                 ))}
               </ul>
+
             )}
           </Card>
         </TabsContent>

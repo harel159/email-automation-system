@@ -34,6 +34,27 @@ export async function uploadAttachmentFile(req, res) {
   }
 }
 
+// ========= Delete Attachment ========= //
+export async function deleteAttachment(req, res) {
+  const { filename } = req.body;
+
+  if (!filename || typeof filename !== 'string') {
+    return res.status(400).json({ error: "Invalid 'filename'." });
+  }
+
+  const filePath = path.join(ATTACHMENTS_DIR, filename);
+
+  try {
+    await fs.unlink(filePath);
+    console.log(`🗑 Attachment deleted: ${filename}`);
+    res.json({ success: true, deleted: filename });
+  } catch (err) {
+    console.error(`❌ Failed to delete attachment: ${filename}`, err);
+    res.status(500).json({ error: 'Failed to delete attachment' });
+  }
+}
+
+
 // ========= Send Test Email ========= //
 export async function sendTestEmail(req, res) {
   const { to, subject, body, from_name, reply_to } = req.body;
