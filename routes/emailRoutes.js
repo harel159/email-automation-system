@@ -6,8 +6,6 @@ import {
   getEmailTemplate,
   saveEmailTemplate,
   listAttachments,
-  verifyEmailApiToken,
-  deleteAttachment
 } from '../controllers/emailController.js';
 
 
@@ -19,7 +17,6 @@ const router = express.Router();
 router.get('/attachments', listAttachments);
 router.post('/test-send', sendTestEmail);
 router.post('/upload-attachment', uploadAttachmentFile);
-router.post('/attachments/delete', verifyEmailApiToken, deleteAttachment);
 // ✅ For session-based dashboard
 router.post('/send-all', sendBulkEmails);
 

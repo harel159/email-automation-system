@@ -11,7 +11,7 @@ import CryptoJS from 'crypto-js';
 
 import clientRoutes from './routes/clientRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
-import { sendBulkEmails, verifyEmailApiToken } from './controllers/emailController.js';
+import { sendBulkEmails, verifyEmailApiToken, deleteAttachment } from './controllers/emailController.js';
 
 dotenv.config();
 
@@ -116,6 +116,8 @@ function requireLogin(req, res, next) {
 
 // 🔓 Public API token route (bypass session)
 app.post('/api/email/send-all-token', verifyEmailApiToken, sendBulkEmails);
+app.post('/api/email/attachments/delete', verifyEmailApiToken, deleteAttachment);
+
 
 // 🔒 Session-protected routes
 app.post('/api/email/send-all', requireLogin, sendBulkEmails);
