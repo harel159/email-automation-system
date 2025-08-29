@@ -1,226 +1,283 @@
-
-import fs from 'fs/promises';
+// server/controllers/emailController.js
+import fs from 'fs';
+import { promises as fsp } from 'fs';
 import path from 'path';
-import { getAllAttachments } from '../services/attachmentService.js';
 import nodemailer from 'nodemailer';
-import pool from '../services/db.js';
+import { query } from '../db/index.js';
+import { fileURLToPath } from 'url';
 
-const TEMPLATE_PATH = path.join('data', 'email_template.json');
-const ATTACHMENTS_DIR = path.join('attachments');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
+// server root folder (…/server)
+const SERVER_ROOT = path.resolve(__dirname, '..');
+
+// use server/attachments as absolute dir always
+const ATTACHMENTS_DIR = path.join(SERVER_ROOT, 'attachments');
 
 
-
-
-// ========= Upload Attachment ========= //
+/** -----------------------------
+ * Upload a PDF to /attachments with an ASCII-safe filename,
+ * keep the original name for display in email clients.
+ * Responds: { success, savedFilename, originalFilename }
+ * ----------------------------*/
 export async function uploadAttachmentFile(req, res) {
-  if (!req.files || !req.files.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-
-  const file = req.files.file;
-
-  if (!file.name.endsWith('.pdf')) {
-    return res.status(400).json({ error: 'Only PDF files allowed' });
-  }
-
-  const uploadPath = path.join('attachments', file.name);
-
   try {
-    await file.mv(uploadPath);
-    res.json({ success: true, filename: file.name });
+    if (!req.files || !req.files.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const file = req.files.file;
+    const originalName = file.name ?? 'file.pdf';
+    const ext = (originalName.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
+
+    if (ext !== '.pdf') {
+      return res.status(400).json({ error: 'Only PDF files allowed' });
+    }
+
+    // Ensure folder exists
+    await fsp.mkdir(ATTACHMENTS_DIR, { recursive: true });
+
+    // ASCII-safe filename on disk
+    const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const safeName = `${uid}${ext}`;
+    const uploadPath = path.join(ATTACHMENTS_DIR, safeName);
+
+    await file.mv(uploadPath); // express-fileupload returns a promise when no callback passed
+    return res.json({ success: true, savedFilename: safeName, originalFilename: originalName });
   } catch (err) {
     console.error('Upload error:', err);
-    res.status(500).json({ error: 'Upload failed' });
+    return res.status(500).json({ error: 'Upload failed' });
   }
 }
 
-// ========= Delete Attachment ========= //
+/** -----------------------------
+ * Delete a file from disk by filename (legacy helper)
+ * Body: { filename }
+ * ----------------------------*/
 export async function deleteAttachment(req, res) {
   const { filename } = req.body;
-
   if (!filename || typeof filename !== 'string') {
     return res.status(400).json({ error: "Invalid 'filename'." });
   }
-
-  const filePath = path.join(ATTACHMENTS_DIR, filename);
-
   try {
-    await fs.unlink(filePath);
+    const filePath = path.join(ATTACHMENTS_DIR, filename);
+    await fsp.unlink(filePath);
     console.log(`🗑 Attachment deleted: ${filename}`);
-    res.json({ success: true, deleted: filename });
+    return res.json({ success: true, deleted: filename });
   } catch (err) {
     console.error(`❌ Failed to delete attachment: ${filename}`, err);
-    res.status(500).json({ error: 'Failed to delete attachment' });
+    return res.status(500).json({ error: 'Failed to delete attachment' });
   }
 }
 
+/** -----------------------------
+ * Build Nodemailer attachments from DB rows
+ * Uses disk path from file_url + display filename from file_name
+ * Skips missing files to avoid ENOENT crashes
+ * ----------------------------*/
+export async function buildDbAttachments() {
+  const { rows } = await query(`
+    SELECT file_name, file_url
+    FROM attachments
+    ORDER BY id
+  `);
 
-// ========= Send Test Email ========= //
+  const list = [];
+  for (const r of rows) {
+    // file_url like "/attachments/alpha.pdf" -> "<cwd>/attachments/alpha.pdf"
+    const diskPath = path.join(SERVER_ROOT, r.file_url.replace(/^\//, ''));
+    if (!fs.existsSync(diskPath)) {
+      console.warn('[attachments] missing file, skipping:', diskPath);
+      continue;
+    }
+    list.push({
+      filename: r.file_name || path.basename(diskPath), // shown in the email client
+      path: diskPath,                                   // actual file to attach
+      contentType: 'application/pdf',
+      contentDisposition: 'attachment',
+    });
+    
+  }
+  console.log('Attachments to send:', list.map(a => a.filename), 'count =', list.length);
+  return list;
+}
+
+/** -----------------------------
+ * Send a single test email (array of raw emails)
+ * Body: { to: string[], subject, body, from_name?, reply_to? }
+ * ----------------------------*/
 export async function sendTestEmail(req, res) {
   const { to, subject, body, from_name, reply_to } = req.body;
 
-  if (!Array.isArray(to) || to.length === 0 || to.some(email => typeof email !== 'string')) {
-    return res.status(400).json({ error: "Invalid 'to' field. Must be a non-empty array of strings." });
+  if (!Array.isArray(to) || to.length === 0 || to.some(e => typeof e !== 'string')) {
+    return res.status(400).json({ error: "Invalid 'to'. Must be an array of strings." });
   }
-  if (typeof subject !== 'string' || subject.trim() === "") {
-    return res.status(400).json({ error: "Invalid 'subject'. Must be a non-empty string." });
+  if (typeof subject !== 'string' || !subject.trim()) {
+    return res.status(400).json({ error: "Invalid 'subject'." });
   }
-  if (typeof body !== 'string' || body.trim() === "") {
-    return res.status(400).json({ error: "Invalid 'body'. Must be a non-empty string." });
+  if (typeof body !== 'string' || !body.trim()) {
+    return res.status(400).json({ error: "Invalid 'body'." });
   }
 
-  const attachments = getAllAttachments().map(file => ({
-    filename: file.name,
-    path: file.path
-  }));
+  const attachments = await buildDbAttachments();
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
+    secure: false, // 587 with STARTTLS
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
   });
 
   const rtlBody = `<div dir="rtl" style="text-align:right; font-family:Arial, sans-serif;">${body}</div>`;
 
   try {
-    await transporter.sendMail({
-      from: `"${from_name || 'Road Protect'}" <${process.env.EMAIL_USER}>`,
+    const info = await transporter.sendMail({
+      from: `"${from_name || 'Demo System'}" <${process.env.EMAIL_USER}>`,
       to,
-      subject: subject || "No subject",
+      subject,
       html: rtlBody,
       replyTo: reply_to || undefined,
-      attachments
+      attachments,
     });
-
-    res.json({ success: true, sent: true });
+    console.log('Accepted:', info.accepted, 'Rejected:', info.rejected, 'MessageId:', info.messageId);
+    return res.json({ success: true, sent: true });
   } catch (err) {
-    console.error("Email send error:", err);
-    res.status(500).json({ success: false, error: err.message });
+    console.error('Email send error:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 }
 
-
-// ========= Send Bulk Emails ========= //
+/** -----------------------------
+ * Send bulk emails (recipients = [{email, name}])
+ * Body: { to: {email,name}[], subject, body, from_name?, reply_to? }
+ * ----------------------------*/
 export async function sendBulkEmails(req, res) {
   const { to = [], subject, body, from_name, reply_to } = req.body;
 
-  // ✅ Updated validation: to = [{email, name}]
   if (!Array.isArray(to) || to.length === 0 || to.some(r => !r.email || typeof r.email !== 'string')) {
-    return res.status(400).json({ error: "Invalid 'to' field. Must be a non-empty array of { email, name }." });
+    return res.status(400).json({ error: "Invalid 'to'. Must be a non-empty array of { email, name }." });
   }
-  if (typeof subject !== 'string' || subject.trim() === "") {
-    return res.status(400).json({ error: "Invalid 'subject'. Must be a non-empty string." });
+  if (typeof subject !== 'string' || !subject.trim()) {
+    return res.status(400).json({ error: "Invalid 'subject'." });
   }
-  if (typeof body !== 'string' || body.trim() === "") {
-    return res.status(400).json({ error: "Invalid 'body'. Must be a non-empty string." });
+  if (typeof body !== 'string' || !body.trim()) {
+    return res.status(400).json({ error: "Invalid 'body'." });
   }
 
-  const attachments = getAllAttachments().map(file => ({
-    filename: file.name,
-    path: file.path
-  }));
+  // current template id (optional)
+  const { rows: tplRows } = await query('SELECT id FROM email_templates ORDER BY id LIMIT 1');
+  const templateId = tplRows[0]?.id ?? null;
+
+  // resolve authorities in one query
+  const emails = to.map(r => r.email);
+  let authByEmail = new Map();
+  if (emails.length > 0) {
+    const { rows: authRows } = await query(
+      'SELECT id, email FROM authorities WHERE email = ANY($1::text[])',
+      [emails]
+    );
+    authByEmail = new Map(authRows.map(r => [r.email, r.id]));
+  }
+
+  const attachments = await buildDbAttachments(); // <-- fixed (no nested array)
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
     secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
   });
 
   const rtlBody = `<div dir="rtl" style="text-align:right; font-family:Arial, sans-serif;">${body}</div>`;
-
   const results = [];
 
   for (const recipient of to) {
     const recipientEmail = recipient.email;
-    const recipientName = recipient.name || "";
-
-    const personalizedSubject = `${subject} ${recipientName}`;
+    const recipientName = recipient.name || '';
+    const personalizedSubject = `${subject} ${recipientName}`.trim();
+    const authorityId = authByEmail.get(recipientEmail) ?? null;
 
     try {
-      await transporter.sendMail({
-        from: `"${from_name || 'Road Protect'}" <${process.env.EMAIL_USER}>`,
+      const info = await transporter.sendMail({
+        from: `"${from_name || 'Demo System'}" <${process.env.EMAIL_USER}>`,
         to: recipientEmail,
         subject: personalizedSubject,
         html: rtlBody,
         replyTo: reply_to || undefined,
-        attachments
+        attachments,
       });
 
-      // ✅ Update latestInfoDate
-      await pool.query(
-        'UPDATE issuer SET "latestInfoDate" = NOW() WHERE email = $1',
-        [recipientEmail]
+      await query(
+        `INSERT INTO email_logs (authority_id, email, template_id, status)
+         VALUES ($1, $2, $3, 'sent')`,
+        [authorityId, recipientEmail, templateId]
       );
 
+      console.log('✅ sent to', recipientEmail, 'msgId:', info.messageId);
       results.push({ to: recipientEmail, success: true });
     } catch (err) {
       console.error(`❌ Failed to send to ${recipientEmail}:`, err);
+
+      await query(
+        `INSERT INTO email_logs (authority_id, email, template_id, status, error)
+         VALUES ($1, $2, $3, 'failed', $4)`,
+        [authorityId, recipientEmail, templateId, (err?.message || 'unknown error').slice(0, 500)]
+      );
+
       results.push({ to: recipientEmail, success: false, error: err.message });
     }
   }
 
-  res.json({ success: true, results });
+  return res.json({ success: true, results });
 }
 
-
-
-
-//=================Token Middleware======================//
-
-
+/** -----------------------------
+ * Token middleware for /send-all-token
+ * ----------------------------*/
 export function verifyEmailApiToken(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1];
-
+  const token = req.headers.authorization?.split(' ')[1];
   if (!token || token !== process.env.EMAIL_API_TOKEN) {
     console.error('❌ Invalid or missing API token');
     return res.status(401).json({ error: 'Invalid API token' });
   }
-
-  next();
+  return next();
 }
 
+/** -----------------------------
+ * Legacy JSON template endpoints (kept for compatibility)
+ * ----------------------------*/
+const TEMPLATE_PATH = path.join(process.cwd(), 'data', 'email_template.json');
 
-// ========= Get Email Template ========= //
 export async function getEmailTemplate(req, res) {
   try {
-    const fileContent = await fs.readFile(TEMPLATE_PATH, 'utf-8');
+    const fileContent = await fsp.readFile(TEMPLATE_PATH, 'utf-8');
     const template = JSON.parse(fileContent);
-    res.json(template);
+    return res.json(template);
   } catch (err) {
     if (err.code === 'ENOENT') {
-      // File doesn't exist yet → return default empty template
       return res.json({
         subject: '',
         body: '',
         attachments: [],
         from_name: '',
         reply_to: '',
-        is_active: true
+        is_active: true,
       });
     }
     console.error('❌ Failed to load template:', err);
-    res.status(500).json({ error: 'Failed to load template' });
+    return res.status(500).json({ error: 'Failed to load template' });
   }
 }
 
-// ========= Save Email Template ========= //
 export async function saveEmailTemplate(req, res) {
   const { subject, body, from_name, reply_to, attachments = [] } = req.body;
 
-  if (typeof subject !== 'string' || subject.trim() === "") {
-    return res.status(400).json({ error: "Subject is required." });
+  if (typeof subject !== 'string' || !subject.trim()) {
+    return res.status(400).json({ error: 'Subject is required.' });
   }
-  if (typeof body !== 'string' || body.trim() === "") {
-    return res.status(400).json({ error: "Body is required." });
+  if (typeof body !== 'string' || !body.trim()) {
+    return res.status(400).json({ error: 'Body is required.' });
   }
   if (from_name && typeof from_name !== 'string') {
     return res.status(400).json({ error: "'from_name' must be a string." });
@@ -232,55 +289,43 @@ export async function saveEmailTemplate(req, res) {
     return res.status(400).json({ error: "'attachments' must be an array." });
   }
 
-
   const newTemplate = {
     subject: subject || '',
     body: body || '',
     from_name: from_name || '',
     reply_to: reply_to || '',
     attachments,
-    is_active: true
+    is_active: true,
   };
 
   try {
-    await fs.writeFile(TEMPLATE_PATH, JSON.stringify(newTemplate, null, 2));
-    res.json({ success: true });
+    await fsp.mkdir(path.dirname(TEMPLATE_PATH), { recursive: true });
+    await fsp.writeFile(TEMPLATE_PATH, JSON.stringify(newTemplate, null, 2));
+    return res.json({ success: true });
   } catch (err) {
     console.error('❌ Failed to save template:', err);
-    res.status(500).json({ error: 'Failed to save template' });
+    return res.status(500).json({ error: 'Failed to save template' });
   }
 }
 
 export async function listAttachments(req, res) {
   try {
-    console.log('📂 Trying to read attachments directory:', ATTACHMENTS_DIR);
+    await fsp.access(ATTACHMENTS_DIR).catch(() => {
+      throw Object.assign(new Error('Attachments directory missing on server'), { code: 'ENOENT' });
+    });
 
-    // Check if directory exists
-    const dirExists = await fs.stat(ATTACHMENTS_DIR).then(() => true).catch(() => false);
-    if (!dirExists) {
-      console.error('❌ Attachments directory does not exist:', ATTACHMENTS_DIR);
-      return res.status(500).json({ error: 'Attachments directory missing on server' });
-    }
-
-    const files = await fs.readdir(ATTACHMENTS_DIR);
-    console.log('✅ Files found in attachments directory:', files);
-
+    const files = await fsp.readdir(ATTACHMENTS_DIR);
     const fileDetails = await Promise.all(
       files.map(async (file) => {
         const fullPath = path.join(ATTACHMENTS_DIR, file);
-        const stats = await fs.stat(fullPath);
-        return {
-          name: file,
-          sizeKB: (stats.size / 1024).toFixed(1)
-        };
+        const stats = await fsp.stat(fullPath);
+        return { name: file, sizeKB: (stats.size / 1024).toFixed(1) };
       })
     );
 
-    res.json(fileDetails);
+    return res.json(fileDetails);
   } catch (err) {
     console.error('❌ Failed to list attachments:', err.stack || err);
-    res.status(500).json({ error: 'Failed to list attachments' });
+    return res.status(500).json({ error: 'Failed to list attachments' });
   }
 }
-
-

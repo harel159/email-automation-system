@@ -1,28 +1,32 @@
-import db from '../services/db.js';
+import { query } from '../db/index.js';
 
+// GET /api/clients  → [{ id, name, email, last_email_sent }]
 export async function getAllAuthorities(req, res) {
   try {
-    const result = await db.query(`
-    SELECT 
-        email,
-        STRING_AGG(name, ', ') AS names,
-        MAX("latestInfoDate") AS last_email_sent
-      FROM issuer
-      WHERE email IS NOT NULL AND name IS NOT NULL
-      GROUP BY email
-      ORDER BY names 
+    const { rows } = await query(`
+      SELECT
+        a.id,
+        a.name,
+        a.email,
+        -- latest successful send time for this email (null if never)
+        (
+          SELECT MAX(el.sent_at)
+          FROM email_logs el
+          WHERE el.email = a.email AND el.status = 'sent'
+        ) AS last_email_sent
+      FROM authorities a
+      WHERE a.active = TRUE
+      ORDER BY a.name
     `);
 
-    const authorities = result.rows.map((row, index) => ({
-      id: index + 1,
-      name: row.names,
-      email: row.email,
-      last_email_sent: row.last_email_sent
-    }));
-
-    res.json(authorities);
+    res.json(rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      last_email_sent: r.last_email_sent, // may be null
+    })));
   } catch (err) {
-    console.error('❌ Failed to fetch authorities:', err);
-    res.status(500).json({ error: 'Failed to load authorities' });
+    console.error('GET /api/clients error:', err);
+    res.status(500).json({ error: err.message });
   }
 }

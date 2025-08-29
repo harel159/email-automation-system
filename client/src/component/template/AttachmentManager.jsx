@@ -2,122 +2,103 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/component/ui/button";
 import { Upload, X } from "lucide-react";
 import { Card } from "@/component/ui/card";
-import { uploadAttachmentFile } from "@/lib/emailAttachments";
+import { uploadAttachmentFile, addAttachmentMetadata, deleteAttachmentMetadata } from "@/lib/emailAttachments";
 
 /**
- * AttachmentManager handles the file upload process (manual + drag-drop)
- * and keeps the uploaded list synced with the parent template.
+ * Props:
+ * - template: { id, ... , attachments: [] }
+ * - onTemplateChange: fn to update parent (receives new template object)
  */
-export default function AttachmentManager({ savedAttachments = [], onSaveAttachments }) {
-  const [attachments, setAttachments] = useState(savedAttachments);
-
+export default function AttachmentManager({ template, onTemplateChange }) {
+  const [attachments, setAttachments] = useState(template?.attachments || []);
   const fileInputRef = useRef(null);
-  const dropZoneRef = useRef(null);
 
-  // Sync when parent sends updated attachment list
   useEffect(() => {
-    setAttachments(savedAttachments);
-  }, [savedAttachments]);
+    setAttachments(template?.attachments || []);
+  }, [template?.attachments]);
 
-  /**
-   * Handle selected files (from input or drop)
-   */
   const handleFiles = useCallback(
     async (files) => {
+      if (!template?.id) {
+        alert("Please save or load the template first so it has an ID.");
+        return;
+      }
       const fileList = Array.from(files);
-      const uploaded = [];
-  
+      const newRows = [];
+
       for (const file of fileList) {
         try {
-          const res = await uploadAttachmentFile(file);
-          uploaded.push({
-            file_name: res.filename,
-            file_url: `/attachments/${res.filename}`,
-            file_size: file.size
+          // 1) upload PDF to /attachments folder
+          const up = await uploadAttachmentFile(file); // { success, filename }
+          // 2) persist metadata in DB
+          const row = await addAttachmentMetadata({
+            template_id: template.id,
+            file_name: file.name,                      // display name (can be Hebrew)
+            file_url: `/attachments/${up.filename}`    // path we serve
           });
+          newRows.push(row);
         } catch (err) {
-          console.error("Upload failed:", err);
+          console.error("Upload/Save failed:", err);
           alert(`Upload failed for ${file.name}`);
         }
       }
-  
-      const combined = [...attachments, ...uploaded];
-      console.log("✅ Normalized attachments being saved:", combined);
-      setAttachments(combined);
-      onSaveAttachments?.(combined);
+
+      if (newRows.length) {
+        const combined = [...attachments, ...newRows];
+        setAttachments(combined);
+        onTemplateChange?.({ ...template, attachments: combined });
+      }
     },
-    [attachments, onSaveAttachments]
+    [attachments, onTemplateChange, template]
   );
 
-  /**
-   * Handle file input trigger
-   */
   const handleFileInputChange = (e) => {
-    if (e.target.files?.length) {
-      handleFiles(e.target.files);
-    }
+    if (e.target.files?.length) handleFiles(e.target.files);
   };
 
-  /**
-   * Handle drag-and-drop upload
-   */
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.dataTransfer.files?.length) {
-      handleFiles(e.dataTransfer.files);
-    }
+    if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
   };
 
-  /**
-   * Remove attachment by index
-   */
-  const handleRemove = (index) => {
-    const updated = attachments.filter((_, i) => i !== index);
-    setAttachments(updated);
-    onSaveAttachments?.(updated);
+  const handleRemove = async (index) => {
+    const item = attachments[index];
+    try {
+      if (item?.id) await deleteAttachmentMetadata(item.id);
+      const updated = attachments.filter((_, i) => i !== index);
+      setAttachments(updated);
+      onTemplateChange?.({ ...template, attachments: updated });
+    } catch (e) {
+      console.error("Delete failed", e);
+      alert("Delete failed");
+    }
   };
 
   return (
     <div className="space-y-4">
-      {/* Drop zone / file picker */}
+      {/* Drop zone / picker */}
       <div
-        ref={dropZoneRef}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         className="border border-dashed border-gray-400 rounded-md p-6 text-center cursor-pointer bg-white hover:bg-gray-50"
         onClick={() => fileInputRef.current?.click()}
       >
         <Upload className="w-6 h-6 mx-auto mb-2 text-gray-600" />
-        <p className="text-sm text-gray-600">Click or drag and drop to upload files</p>
-        <input
-          type="file"
-          multiple
-          onChange={handleFileInputChange}
-          ref={fileInputRef}
-          className="hidden"
-        />
+        <p className="text-sm text-gray-600">Click or drag and drop to upload PDF files</p>
+        <input type="file" accept="application/pdf" multiple onChange={handleFileInputChange} ref={fileInputRef} className="hidden" />
       </div>
 
-      {/* Uploaded attachments list */}
-      {attachments.length > 0 && (
+      {/* List */}
+      {attachments?.length > 0 && (
         <div className="space-y-2">
-          {attachments.map((file, idx) => (
-            <div
-              key={idx}
-              className="flex justify-between items-center border p-2 rounded bg-gray-50"
-            >
+          {attachments.map((a, idx) => (
+            <div key={a.id ?? idx} className="flex justify-between items-center border p-2 rounded bg-gray-50">
               <div>
-                <p className="text-sm font-medium">{file.name}</p>
-                <p className="text-xs text-gray-500">
-                  {(file.size / 1024).toFixed(1)} KB
-                </p>
+                <p className="text-sm font-medium">{a.file_name}</p>
+                <p className="text-xs text-gray-500">{a.file_url}</p>
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => handleRemove(idx)}
-              >
+              <Button size="icon" variant="ghost" onClick={() => handleRemove(idx)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -128,18 +109,12 @@ export default function AttachmentManager({ savedAttachments = [], onSaveAttachm
   );
 }
 
-/**
- * AttachmentTab: Renders the AttachmentManager in a wrapped tab panel
- */
-export const AttachmentTab = ({ template, setTemplate }) => {
-  return (
-    <Card className="p-6 space-y-6">
-      <AttachmentManager
-        savedAttachments={template.attachments}
-        onSaveAttachments={(updated) =>
-          setTemplate((prev) => ({ ...prev, attachments: updated }))
-        }
-      />
-    </Card>
-  );
-};
+/** Optional wrapper (if you used it before) */
+export const AttachmentTab = ({ template, setTemplate }) => (
+  <Card className="p-6 space-y-6">
+    <AttachmentManager
+      template={template}
+      onTemplateChange={(next) => setTemplate(next)}
+    />
+  </Card>
+);

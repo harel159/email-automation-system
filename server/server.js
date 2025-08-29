@@ -1,4 +1,6 @@
 // File: server.js
+
+import { query } from './db/index.js';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
@@ -8,6 +10,7 @@ import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import bcrypt from 'bcrypt';
 import CryptoJS from 'crypto-js';
+
 
 import clientRoutes from './routes/clientRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
@@ -20,11 +23,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || 'super_secret';
 const passwordHash = process.env.SHARED_USER_PASSWORD_HASH;
 
 const allowedUsers = [
-  { id: 1, email: 'admin@roadprotect.co.il' },
-  { id: 2, email: 'shai@roadprotect.co.il' },
-  { id: 3, email: 'muni@roadprotect.co.il' },
-  { id: 4, email: 'harel@roadprotect.co.il' },
-  { id: 5, email: 'ERAN@ROADPROTECT.CO.IL'}
+  { id: 1, email: 'demo@gmail.com' }
 ];
 
 // ========== AUTH STRATEGY ==========
@@ -120,6 +119,24 @@ app.post('/api/email/attachments/delete', verifyEmailApiToken, deleteAttachment)
 
 
 // 🔒 Session-protected routes
+app.get('/api/authorities', requireLogin, async (req, res) => {
+  try {
+    const { rows } = await query(`
+      SELECT id, name, email, active
+      FROM authorities
+      ORDER BY name
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /api/authorities error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/email/send-all', requireLogin, sendBulkEmails);
+app.use('/api/email', requireLogin, emailRoutes);
+app.use('/api/clients', requireLogin, clientRoutes);
+
 app.post('/api/email/send-all', requireLogin, sendBulkEmails);
 app.use('/api/email', requireLogin, emailRoutes);
 app.use('/api/clients', requireLogin, clientRoutes);

@@ -6,7 +6,7 @@ import { Button } from '@/component/ui/button';
 import { API_BASE_URL } from '../config';
 import CryptoJS from 'crypto-js';
 
-const ENCRYPTION_SECRET = 'rVc2BgX7YlplokSK0HtNb5ZGJTyhxERb'
+const ENCRYPTION_SECRET = '0a9a738b3a81ecabd897d39f205d5522a0c0442b15ef46e5cde18fbf32f5e9b27d0ec807877989db6591c6402bf1c04b'
 
 
 

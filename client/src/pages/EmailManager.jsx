@@ -4,20 +4,26 @@ import { Button } from "@/component/ui/button";
 import { Input } from "@/component/ui/input";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { AlertCircle, Save, Send, Info, Upload } from "lucide-react";
+import { Info, Save, Send, Upload } from "lucide-react";
 import { Alert, AlertDescription } from "@/component/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/component/ui/tabs";
 import { sendEmail } from "@/lib/emailSender";
-import { getEmailTemplate, saveEmailTemplate } from "@/lib/emailTemplates";
-import { API_BASE_URL } from "../config"; 
+import { API_BASE_URL } from "../config";
 
-const TABS = {
-  TEMPLATE: "template",
-  ATTACHMENTS: "attachments",
-};
+const TABS = { TEMPLATE: "template", ATTACHMENTS: "attachments" };
 
 export default function EmailManager() {
-  const [template, setTemplate] = useState({ subject: "", body: "", attachments: [], from_name: "", reply_to: "", is_active: true });
+  const [template, setTemplate] = useState({
+    id: null,
+    title: "Monthly Status Update",
+    subject: "",
+    body: "",
+    body_html: "",
+    attachments: [],
+    from_name: "",
+    reply_to: "",
+    is_active: true
+  });
   const [authorities, setAuthorities] = useState([]);
   const [testEmail, setTestEmail] = useState([]);
   const [activeTab, setActiveTab] = useState(TABS.TEMPLATE);
@@ -27,106 +33,104 @@ export default function EmailManager() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [serverAttachments, setServerAttachments] = useState([]);
   const [uploading, setUploading] = useState(false);
 
-  const loadTemplate = useCallback(async () => {
-    try {
-      const data = await getEmailTemplate();
-      if (data) setTemplate(prev => ({ ...prev, ...data }));
-      setLoaded(true);
-    } catch (err) {
-      console.error("❌ Failed to load template:", err);
-      setLoaded(true);
-    }
-  }, []);
+  // === API helpers ===
+  const apiGetTemplate = async () => {
+    const res = await fetch(`${API_BASE_URL}/email/template`, { credentials: "include" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json(); // {id,title,subject,body_html,attachments:[]}
+  };
 
-  const handleDeleteAttachment = async (filename) => {
-  if (!confirm(`Delete attachment: ${filename}?`)) return;
-  try {
+  const apiSaveTemplate = async (payload) => {
+    const hasId = Boolean(payload.id);
+    const res = await fetch(`${API_BASE_URL}/email/template${hasId ? `/${payload.id}` : ""}`, {
+      method: hasId ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+
+  const apiUploadFile = async (file) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/email/upload-attachment`, {
+      method: "POST",
+      body: fd,
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(`Upload HTTP ${res.status}`);
+    return res.json(); // {success,savedFilename,originalFilename}
+  };
+
+  const apiAddAttachment = async ({ template_id, file_name, file_url }) => {
+    const res = await fetch(`${API_BASE_URL}/email/attachments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ template_id, file_name, file_url }),
+    });
+    if (!res.ok) throw new Error(`Add attach HTTP ${res.status}`);
+    return res.json(); // { id, file_name, file_url, created_at }
+  };
+
+  const apiDeleteAttachment = async (id) => {
     const res = await fetch(`${API_BASE_URL}/email/attachments/delete`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_EMAIL_API_TOKEN}`
-      },
-      body: JSON.stringify({ filename })
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ id }),
     });
+    if (!res.ok) throw new Error(`Delete attach HTTP ${res.status}`);
+    return res.json();
+  };
 
-    const data = await res.json();
-    if (data.success) {
-      setSuccess(`Attachment ${filename} deleted successfully.`);
-      await loadAttachments(); // 🔄 Reload list from server
-    } else {
-      setError(data.error || "Failed to delete attachment.");
-    }
-  } catch (err) {
-    console.error("❌ Delete error:", err);
-    setError("Failed to delete attachment.");
-  }
-};
-
-
-
-
-  const loadAttachments = async () => {
-  try {
-    console.log("📥 Fetching attachments from:", `${API_BASE_URL}/email/attachments`);
-
-    const res = await fetch(`${API_BASE_URL}/email/attachments`, {
-      credentials: 'include'
-    });
-
-    console.log("📤 Response status:", res.status);
-
-    const text = await res.text();
-    console.log("📦 Raw response:", text);
-
-    if (!res.ok) throw new Error(`HTTP ${res.status} - ${text}`);
-
-    const data = JSON.parse(text);
-    if (!Array.isArray(data)) {
-      console.error("🚫 Invalid format from server:", data);
-      throw new Error("Server returned unexpected format");
-    }
-
-    setServerAttachments(data);
-  } catch (err) {
-    console.error("❌ Failed to load attachments:", err);
-    setServerAttachments([]);
-    setError("Could not fetch attachments. Check console logs.");
-  }
-};
-
-
+  // === Load initial data ===
   useEffect(() => {
-    loadTemplate();
-    loadAttachments();
-
-    const fetchAuthorities = async () => {
+    (async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/clients`, { credentials: 'include' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`); 
-        const data = await res.json();
-        if (!Array.isArray(data)) throw new Error("Invalid response format");
-        setAuthorities(data);
-      } catch (err) {
-        console.error("❌ Failed to load authorities:", err);
-        setAuthorities([]);
+        // Template (PG)
+        const t = await apiGetTemplate();
+        if (t) {
+          setTemplate(prev => ({
+            ...prev,
+            ...t,
+            body: t.body_html || "", // map DB -> editor
+            body_html: t.body_html || ""
+          }));
+        }
+        // Authorities for recipients
+        const res = await fetch(`${API_BASE_URL}/clients`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setAuthorities(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        console.error("Init load error", e);
+      } finally {
+        setLoaded(true);
       }
-    };
-
-    fetchAuthorities(); 
+    })();
   }, []);
 
-
+  // === Save template (PG) ===
   const handleSave = async () => {
     try {
       setSaving(true);
       setError(null);
       setSuccess(null);
       if (!template.subject) throw new Error("Please fill in the subject");
-      await saveEmailTemplate({ ...template });
+      const payload = {
+        id: template.id || undefined,
+        title: template.title || "Monthly Status Update",
+        subject: template.subject,
+        body_html: template.body, // editor content
+      };
+      const saved = await apiSaveTemplate(payload);
+      setTemplate(prev => ({ ...prev, ...saved, body: saved.body_html }));
       setSuccess("Template saved successfully");
     } catch (err) {
       setError(err.message || "Failed to save template");
@@ -135,30 +139,23 @@ export default function EmailManager() {
     }
   };
 
+  // === Send emails (uses server-side attachments from DB) ===
   const handleSend = async () => {
     try {
       setSending(true);
       setError(null);
       setSuccess(null);
-
       if (!template.subject || !template.body || testEmail.length === 0) {
         throw new Error("Please fill subject, body, and select recipients.");
       }
-
-      // Build recipients array (currently testEmail holds emails, not IDs)
       const recipients = authorities
-        .filter(auth => testEmail.includes(auth.email))
-        .map(auth => ({
-          email: auth.email,
-          name: auth.name
-        }));
-
+        .filter(a => testEmail.includes(a.email))
+        .map(a => ({ email: a.email, name: a.name }));
 
       await sendEmail({
         to: recipients,
         subject: template.subject,
         body: template.body,
-        attachments: template.attachments,
         from_name: template.from_name,
         reply_to: template.reply_to,
       });
@@ -172,27 +169,46 @@ export default function EmailManager() {
     }
   };
 
-
-
+  // === Upload + attach to template (DB metadata) ===
   const handleUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
+    if (!template?.id) {
+      setError("Please save or load the template first so it has an ID.");
+      return;
+    }
+
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      await fetch(`${API_BASE_URL}/email/upload-attachment`, {
-        method: "POST",
-        body: formData,
-        credentials: 'include'
+      const up = await apiUploadFile(file); // {savedFilename, originalFilename}
+      const meta = await apiAddAttachment({
+        template_id: template.id,
+        file_name: up.originalFilename,                 // Hebrew display name
+        file_url: `/attachments/${up.savedFilename}`,   // ASCII path
       });
-      await loadAttachments();
-      setSuccess(`File ${file.name} uploaded successfully!`);
+      const next = { ...template, attachments: [...(template.attachments || []), meta] };
+      setTemplate(next);
+      setSuccess(`File ${meta.file_name} added.`);
     } catch (err) {
-      console.error("Upload failed:", err);
+      console.error("Upload/Add failed:", err);
       setError("Failed to upload attachment.");
     } finally {
       setUploading(false);
+      // clear input
+      e.target.value = "";
+    }
+  };
+
+  const handleDeleteAttachment = async (attId) => {
+    if (!confirm(`Delete this attachment?`)) return;
+    try {
+      await apiDeleteAttachment(attId);
+      const next = { ...template, attachments: (template.attachments || []).filter(a => a.id !== attId) };
+      setTemplate(next);
+      setSuccess("Attachment deleted.");
+    } catch (e) {
+      console.error("Delete failed", e);
+      setError("Failed to delete attachment.");
     }
   };
 
@@ -215,6 +231,7 @@ export default function EmailManager() {
               <h2 className="text-xl font-semibold">Email Template</h2>
               <div className="flex gap-4 items-center">
 
+                {/* Recipients dropdown */}
                 <div className="relative w-[300px]">
                   <Button onClick={() => setShowDropdown(prev => !prev)} variant="outline" className="w-full justify-between">
                     {testEmail.length > 0 ? `${testEmail.length} selected` : "Select Recipients"}
@@ -251,21 +268,8 @@ export default function EmailManager() {
                 </div>
 
                 <Button onClick={handleSend} disabled={sending} className="bg-green-600 hover:bg-green-700">
-                  {sending ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                      </svg>
-                      Sending...
-                    </span>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" /> Send Email
-                    </>
-                  )}
+                  {sending ? "Sending..." : (<><Send className="w-4 h-4 mr-2" /> Send Email</>)}
                 </Button>
-
 
                 <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
                   <Save className="w-4 h-4 mr-2" />
@@ -292,7 +296,7 @@ export default function EmailManager() {
                 <div className="min-h-[400px] border rounded-md">
                   <ReactQuill
                     theme="snow"
-                    value={template.body}
+                    value={template.body || ""}
                     onChange={(value) => setTemplate(prev => ({ ...prev, body: value }))}
                     className="h-[360px] rtl-body"
                   />
@@ -302,8 +306,8 @@ export default function EmailManager() {
               <Alert className="bg-blue-50 border-blue-100">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-800">
-                  {serverAttachments.length > 0
-                    ? `This email will include ${serverAttachments.length} attachment(s).`
+                  {(template.attachments?.length || 0) > 0
+                    ? `This email will include ${template.attachments.length} attachment(s).`
                     : "No attachments currently added."}
                 </AlertDescription>
               </Alert>
@@ -322,27 +326,22 @@ export default function EmailManager() {
               <label className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 border px-4 py-2 rounded cursor-pointer">
                 <Upload className="w-4 h-4" />
                 <span>{uploading ? "Uploading..." : "Choose PDF"}</span>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleUpload}
-                  className="hidden"
-                />
+                <input type="file" accept=".pdf" onChange={handleUpload} className="hidden" />
               </label>
             </div>
 
-            {serverAttachments.length === 0 ? (
+            {(template.attachments?.length || 0) === 0 ? (
               <p className="text-gray-500">No attachments found.</p>
             ) : (
               <ul className="space-y-2">
-                {serverAttachments.map((file, idx) => (
-                  <li key={idx} className="flex justify-between items-center border rounded p-2">
+                {template.attachments.map((a) => (
+                  <li key={a.id} className="flex justify-between items-center border rounded p-2">
                     <div>
-                      <span className="font-medium">{file.name}</span>
-                      <span className="text-gray-400 text-sm ml-2">{file.sizeKB} KB</span>
+                      <span className="font-medium">{a.file_name}</span>
+                      <span className="text-gray-400 text-sm ml-2">{a.file_url}</span>
                     </div>
                     <button
-                      onClick={() => handleDeleteAttachment(file.name)}
+                      onClick={() => handleDeleteAttachment(a.id)}
                       className="text-red-500 hover:underline"
                     >
                       ❌
@@ -350,11 +349,9 @@ export default function EmailManager() {
                   </li>
                 ))}
               </ul>
-
             )}
           </Card>
         </TabsContent>
-
       </Tabs>
     </div>
   );

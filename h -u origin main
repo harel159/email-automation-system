@@ -1,0 +1,88 @@
+* [33mb47b128[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m adding delete attachment option fix
+* [33md1f1f98[m adding delete attachment option
+* [33m886fd99[m removing dash from subject mail
+* [33m428a1d0[m debugging template mail 1.0
+* [33me5a29d9[m debugging template mail
+* [33mb837538[m adding authorities name to mail subject 3.1
+* [33m38cff99[m adding authorities name to mail subject 3.0
+* [33mc1a05b9[m adding authorities name to mail subject 2.4
+[31m|[m * [33ma553e03[m[33m ([m[1;32mfix-local-api[m[33m)[m adding authorities name to mail subject 2.3
+[31m|[m[31m/[m  
+* [33mc41050a[m adding authorities name to mail subject 2.2
+* [33m6f8bb60[m adding authorities name to mail subject 2.1
+* [33m57dc179[m adding authorities name to mail subject 2.0
+* [33mbc7f3d5[m adding authorities name to mail subject
+* [33m187c268[m mail RTL
+* [33m6cb2c02[m removed unused function
+* [33m74f7408[m adding user and change password
+* [33m6a79818[m refactoring, UI performance, fix capital sesetivity in username, template RTL
+* [33mfe92236[m some print logs
+* [33m8e4bdcf[m fix server.js
+* [33mb65c816[m test1
+* [33m6c64ebb[m us token based api to authoized send mail2.0
+* [33mcdaded7[m us token based api to authoized send mail
+* [33mc36a014[m session id
+* [33m1aa42d1[m another try no comment LOL
+* [33m018dca0[m samesite fix
+* [33mc48d173[m fix import
+* [33mf3af77e[m change axios call to fetch
+* [33m81aa768[m fixing server.js 2.1
+* [33m6429006[m fixing server.js 2.0
+* [33m422e98c[m fixing server.js
+* [33m7a670ee[m re-ordering app.use
+* [33m5046cc1[m explisit adding header to send email
+* [33m8918d5a[m adding credential true as default in main
+* [33me3f7676[m adding cradential to upload attachment
+*   [33m5ca5601[m Merge branch 'master' of https://github.com/roadprotect/road-protect-email-automation-system axd ad a qw e commit.q!
+[33m|[m[34m\[m  
+[33m|[m * [33m833f645[m Delete server/Email-tool-backend.code-workspace
+* [34m|[m [33m2680dab[m inlude attachment folder
+[34m|[m[34m/[m  
+* [33m2dcdb6e[m correc env. position
+*   [33m4161094[m Merge branch 'master' of https://github.com/roadprotect/road-protect-email-automation-system
+[35m|[m[36m\[m  
+[35m|[m * [33m6ceb7a2[m Update package.json
+* [36m|[m [33m4fb2c74[m correc env. position
+[36m|[m[36m/[m  
+* [33m33cea34[m encrypt password in payload
+* [33m2e4083a[m fixed attachment? dd logs and few fixes
+* [33m334a35d[m UIfixed and template fix. also adding logs for ttachment to track the issue
+* [33ma158936[m addin credential to get template
+* [33m1433d59[m fix errors
+* [33m82d2b3c[m fix hardcoded login api
+* [33m2dfd3af[m fix hardcoded login api
+* [33mf1689a5[m fix hardcoded login api
+* [33ma692645[m fixing cors and hardcoded api
+* [33md74e3d9[m adding few logs in server.js
+* [33m4e2d404[m adding few logs in server.js
+* [33m0498224[m Adding auth and some fixes
+* [33m0542ba2[m Fix: EmailManager and Dashboard API integration, config cleanup, DB connection restored
+* [33mb10de87[m update
+* [33m5db96cc[m update
+* [33m8c4e922[m update
+* [33m91b5f1f[m update
+* [33m83d1b9b[m update
+* [33me7bfeec[m update
+* [33m562a40b[m udate
+* [33m6c31389[m udate
+* [33mec40408[m update
+* [33m2d80c7e[m update
+* [33ma267d1d[m update
+* [33maf103a9[m update
+* [33md3c1ff7[m update
+* [33mfe67806[m update
+* [33m2ce6989[m update
+* [33mb27b1df[m update
+* [33m5db371d[m update
+* [33ma39db6a[m update
+* [33m1f83d08[m update
+* [33me234061[m update
+* [33mec26a99[m update
+* [33mafa2db9[m update
+* [33m3652238[m update api call
+* [33mf0fdff6[m ✨ Add latest email sent date to authorities table
+* [33me7ceabf[m 🔒 Add email last update into DB
+* [33m7b1c7c9[m 🔒 Add input validation, switch to production email, prepare for deployment
+* [33mcef7003[m 🚀 Finalize Email Manager: templates, attachments, manual sending working
+* [33m998ea6a[m Properly rename folders to server and client
+* [33mb300194[m Initial clean commit

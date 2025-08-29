@@ -1,26 +1,37 @@
-import axios from 'axios';
-import {API_BASE_URL} from "../config";
+import axios from "axios";
+import { API_BASE_URL } from "../config";
 
-const UPLOAD_ENDPOINT =`${API_BASE_URL}/email/upload-attachment`;
-
-/**
- * Upload a single attachment file to the backend.
- * 
- * @param {File} file - The file object to upload
- * @returns {Promise<Object>} - { success: true, filename }
- */
+// Upload the actual PDF file (multipart)
 export async function uploadAttachmentFile(file) {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append("file", file);
 
-  try {
-    const res = await axios.post(UPLOAD_ENDPOINT, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      withCredentials: true 
-    });
-    return res.data;
-  } catch (err) {
-    console.error('❌ Attachment upload failed:', err);
-    throw new Error('Upload failed');
-  }
+  const { data } = await axios.post(
+    `${API_BASE_URL}/email/upload-attachment`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" }, withCredentials: true }
+  );
+  // server responds: { success:true, filename }
+  return data;
+}
+
+// Save attachment metadata in DB (links file to template)
+export async function addAttachmentMetadata({ template_id, file_name, file_url }) {
+  const { data } = await axios.post(
+    `${API_BASE_URL}/email/attachments`,
+    { template_id, file_name, file_url },
+    { withCredentials: true }
+  );
+  // returns { id, file_name, file_url, created_at }
+  return data;
+}
+
+// Delete attachment metadata row by id
+export async function deleteAttachmentMetadata(id) {
+  const { data } = await axios.post(
+    `${API_BASE_URL}/email/attachments/delete`,
+    { id },
+    { withCredentials: true }
+  );
+  return data;
 }

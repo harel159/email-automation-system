@@ -185,7 +185,7 @@ export default function EmailSender({ authorities = [] }) {
         <Input
           value={replyTo}
           onChange={(e) => setReplyTo(e.target.value)}
-          placeholder="e.g. support@roadprotect.com"
+          placeholder="e.g. demo@example.com"
         />
       </div>
 
