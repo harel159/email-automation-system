@@ -15,7 +15,7 @@ export default function ManualEmail() {
   const [attachments, setAttachments] = useState([]);
   const [selectedAuthorities, setSelectedAuthorities] = useState([]);
   const [authorities, setAuthorities] = useState([]);
-  const [fromName, setFromName] = useState("");
+  const [fromName, setFromName] = useState("My company");
   const [replyTo, setReplyTo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -44,40 +44,45 @@ export default function ManualEmail() {
       setAuthorities([]); // or setRecipients([])
     }
   };  
+  // helper fns inside the component:
+  const fileInputId = "manual-attachments-input"; 
+  const onAddFiles = (e) => {
+    const chosen = Array.from(e.target.files || []);
+    // de-dup by name+size
+    const key = (f) => `${f.name}_${f.size}`;
+    const existing = new Set(attachments.map(key));
+    const merged = [...attachments, ...chosen.filter(f => !existing.has(key(f)))];
+    setAttachments(merged);
+    e.target.value = ""; // allow same file to be re-picked
+  };
 
+  const removeFileAt = (idx) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
 
   const handleSendEmail = async () => {
-    if (!subject || !body) {
-      setError("Please fill in both subject and body");
-      return;
-    }
-    if (selectedAuthorities.length === 0) {
-      setError("Please select at least one recipient");
-      return;
-    }
+    if (!subject || !body) { setError("Please fill in both subject and body"); return; }
+    if (selectedAuthorities.length === 0) { setError("Please select at least one recipient"); return; }
 
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setLoading(true); setError(null); setSuccess(null);
 
     try {
       const selectedRecipients = authorities
         .filter(auth => selectedAuthorities.includes(auth.id))
-        .map(auth => ({
-          email: auth.email,
-          name: auth.name
-        }));
+        .map(auth => ({ email: auth.email, name: auth.name }));
 
       await sendEmail({
         to: selectedRecipients,
         subject,
         body,
-        attachments,
+        attachments,            // <-- File[] (one-time)
         from_name: fromName,
-        reply_to: replyTo
+        reply_to: replyTo,
+        include_attachments: false // IMPORTANT: don’t pull DB/template attachments
       });
 
       setSuccess(`Email sent successfully to ${selectedRecipients.length} recipient(s)`);
+      setAttachments([]);
     } catch (err) {
       console.error("Send email error:", err);
       setError(err.message || "Failed to send email.");
@@ -85,8 +90,6 @@ export default function ManualEmail() {
       setLoading(false);
     }
   };
-
-  
 
 
   const handleRemoveAuthority = (authorityId) => {
@@ -96,11 +99,11 @@ export default function ManualEmail() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Manual Email</h1>
+        <h1 className="text-2xl font-bold">Mail to customers</h1>
       </div>
 
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Send Custom Email</h2>
+        <h2 className="text-xl font-semibold mb-6">Send Custom Email to customers</h2>
 
         {error && (
           <Alert variant="destructive" className="mb-6">
@@ -206,15 +209,49 @@ export default function ManualEmail() {
             </div>
           </div>
 
-          <Alert className="bg-blue-50 border-blue-100">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
-              This email will use the attachments from your template.
-              {attachments?.length > 0
-                ? ` Currently ${attachments.length} file(s) will be attached.`
-                : " Currently no files are attached."}
-            </AlertDescription>
-          </Alert>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById(fileInputId)?.click()}
+              >
+                + Add attachment
+              </Button>
+              <input
+                id={fileInputId}
+                type="file"
+                multiple
+                hidden
+                onChange={onAddFiles}
+                // optional: accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.zip"
+              />
+              {attachments.length > 0 && (
+                <Badge variant="secondary">{attachments.length} file(s) selected</Badge>
+              )}
+            </div>
+
+            {attachments.length > 0 && (
+              <ul className="divide-y rounded border">
+                {attachments.map((f, idx) => (
+                  <li key={idx} className="flex items-center justify-between p-2 text-sm">
+                    <span className="truncate">
+                      {f.name} <span className="opacity-60">({(f.size/1024).toFixed(1)} KB)</span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="text-red-600"
+                      onClick={() => removeFileAt(idx)}
+                    >
+                      <X className="h-4 w-4 mr-1" /> Remove
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
 
           <Button
             onClick={handleSendEmail}

@@ -66,8 +66,8 @@ export default function Layout({ children, currentPageName }) {
               Email Management
             </p>
             <div className="space-y-1">
-              <NavLink label="EmailManager" title="Email Template" icon={FileText} active={isActive("EmailManager")} setSidebarOpen={setSidebarOpen} />
-              <NavLink label="ManualEmail" title="Manual Email" icon={Send} active={isActive("ManualEmail")} setSidebarOpen={setSidebarOpen} />
+              <NavLink label="EmailManager" title="Information Request" icon={FileText} active={isActive("EmailManager")} setSidebarOpen={setSidebarOpen} />
+              <NavLink label="ManualEmail" title="Greeting Customers" icon={Send} active={isActive("ManualEmail")} setSidebarOpen={setSidebarOpen} />
             </div>
           </div>
 

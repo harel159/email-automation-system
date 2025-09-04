@@ -15,6 +15,34 @@ const SERVER_ROOT = path.resolve(__dirname, '..');
 // use server/attachments as absolute dir always
 const ATTACHMENTS_DIR = path.join(SERVER_ROOT, 'attachments');
 
+// --- Minimal templating for {{placeholders}} with HTML safety ---
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderTemplate(tmpl, vars) {
+  if (typeof tmpl !== "string" || !tmpl) return tmpl;
+  return tmpl.replace(/{{\s*(\w+)\s*}}/g, (_, key) => escapeHtml(vars[key]));
+}
+
+function varsFromRecipient(recipient) {
+  const full = (recipient?.name || "").trim();
+  const [firstName = "", ...rest] = full.split(/\s+/);
+  const lastName = rest.join(" ");
+  return {
+    name: full,
+    firstName,
+    lastName,
+    email: recipient?.email || "",
+  };
+}
+
+
 
 /** -----------------------------
  * Upload a PDF to /attachments with an ASCII-safe filename,
@@ -153,15 +181,26 @@ export async function sendTestEmail(req, res) {
  * Body: { to: {email,name}[], subject, body, from_name?, reply_to? }
  * ----------------------------*/
 export async function sendBulkEmails(req, res) {
+  //  Support both JSON and multipart(FormData)
+  let bodyPayload = req.body;
+  if (req.body && typeof req.body.json === "string") {
+    try {
+      bodyPayload = JSON.parse(req.body.json);
+    } catch (e) {
+      return res.status(400).json({ error: "Invalid multipart json payload" });
+    }
+  }
+
   const {
     to = [],
     subject,
     body,
     from_name,
     reply_to,
-    include_attachments = true,   // <-- read flag from client (default true)
-  } = req.body;
+    include_attachments = true,
+  } = bodyPayload;
 
+  // Validate
   if (!Array.isArray(to) || to.length === 0 || to.some(r => !r.email || typeof r.email !== 'string')) {
     return res.status(400).json({ error: "Invalid 'to'. Must be a non-empty array of { email, name }." });
   }
@@ -172,9 +211,11 @@ export async function sendBulkEmails(req, res) {
     return res.status(400).json({ error: "Invalid 'body'." });
   }
 
+  //  Template id 
   const { rows: tplRows } = await query('SELECT id FROM email_templates ORDER BY id LIMIT 1');
   const templateId = tplRows[0]?.id ?? null;
 
+  //  Map authorities by email
   const emails = to.map(r => r.email);
   let authByEmail = new Map();
   if (emails.length > 0) {
@@ -185,9 +226,23 @@ export async function sendBulkEmails(req, res) {
     authByEmail = new Map(authRows.map(r => [r.email, r.id]));
   }
 
-  // <-- only attach when include_attachments is true
-  const attachments = include_attachments ? await buildDbAttachments() : [];
+  
+  let attachments = [];
+  if (req.files && req.files.attachments) {
+    const raw = Array.isArray(req.files.attachments)
+      ? req.files.attachments
+      : [req.files.attachments];
 
+    attachments = raw.map(f => ({
+      filename: f.name,
+      content: f.data,        
+      contentType: f.mimetype,
+    }));
+  } else if (include_attachments) {
+    attachments = await buildDbAttachments();
+  }
+
+  //  Transporter 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
@@ -195,14 +250,20 @@ export async function sendBulkEmails(req, res) {
     auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
   });
 
-  const rtlBody = `<div dir="rtl" style="text-align:right; font-family:Arial, sans-serif;">${body}</div>`;
   const results = [];
 
+  //Send loop with per-recipient templating
   for (const recipient of to) {
     const recipientEmail = recipient.email;
-    const recipientName = recipient.name || '';
-    const personalizedSubject = `${subject} ${recipientName}`.trim();
     const authorityId = authByEmail.get(recipientEmail) ?? null;
+
+    // Build variables and render placeholders
+    const tplVars = varsFromRecipient(recipient); // {{name}}
+    const personalizedSubject = renderTemplate(subject, tplVars) || subject;
+    const personalizedBody    = renderTemplate(body,    tplVars) || body;
+
+    // RTL wrapper must wrap the personalized body
+    const rtlBody = `<div dir="rtl" style="text-align:right; font-family:Arial, sans-serif;">${personalizedBody}</div>`;
 
     try {
       const info = await transporter.sendMail({
@@ -237,6 +298,8 @@ export async function sendBulkEmails(req, res) {
 
   return res.json({ success: true, results });
 }
+
+
 
 
 /** -----------------------------
