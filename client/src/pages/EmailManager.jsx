@@ -82,7 +82,7 @@ export default function EmailManager() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, also_delete_file: true }),
     });
     if (!res.ok) throw new Error(`Delete attach HTTP ${res.status}`);
     return res.json();

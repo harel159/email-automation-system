@@ -23,32 +23,28 @@ export default function ManualEmail() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    loadAuthorities();
+    loadCustomers();
   }, []);
 
-  const loadAuthorities = async () => {
+  const loadCustomers = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/clients`,
-        {
-      credentials: 'include'}
-      );
+      const res = await fetch(`${API_BASE_URL}/customers`, {
+        credentials: 'include',
+      });
       const data = await res.json();
+
       if (!Array.isArray(data)) throw new Error("Invalid response format");
+
+      // ensure valid {name,email}
       const valid = data.filter(item => item.name && item.email);
-      const combined = {};
-      for (const auth of valid) {
-        if (combined[auth.email]) {
-          combined[auth.email].name += `, ${auth.name}`;
-        } else {
-          combined[auth.email] = { ...auth };
-        }
-      }
-      setAuthorities(Object.values(combined));
+
+      setAuthorities(valid); // or setRecipients if you renamed the state
     } catch (err) {
-      console.error("Failed to load authorities:", err);
-      setAuthorities([]);
+      console.error("Failed to load customers:", err);
+      setAuthorities([]); // or setRecipients([])
     }
-  };
+  };  
+
 
   const handleSendEmail = async () => {
     if (!subject || !body) {
@@ -89,6 +85,8 @@ export default function ManualEmail() {
       setLoading(false);
     }
   };
+
+  
 
 
   const handleRemoveAuthority = (authorityId) => {

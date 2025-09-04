@@ -22,7 +22,8 @@ export async function sendEmail({ to, subject, body, from_name, reply_to }) {
       subject,
       body,
       from_name,
-      reply_to
+      reply_to,
+      include_attachments: false,
     }),
   });
 

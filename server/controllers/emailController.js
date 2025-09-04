@@ -153,7 +153,14 @@ export async function sendTestEmail(req, res) {
  * Body: { to: {email,name}[], subject, body, from_name?, reply_to? }
  * ----------------------------*/
 export async function sendBulkEmails(req, res) {
-  const { to = [], subject, body, from_name, reply_to } = req.body;
+  const {
+    to = [],
+    subject,
+    body,
+    from_name,
+    reply_to,
+    include_attachments = true,   // <-- read flag from client (default true)
+  } = req.body;
 
   if (!Array.isArray(to) || to.length === 0 || to.some(r => !r.email || typeof r.email !== 'string')) {
     return res.status(400).json({ error: "Invalid 'to'. Must be a non-empty array of { email, name }." });
@@ -165,11 +172,9 @@ export async function sendBulkEmails(req, res) {
     return res.status(400).json({ error: "Invalid 'body'." });
   }
 
-  // current template id (optional)
   const { rows: tplRows } = await query('SELECT id FROM email_templates ORDER BY id LIMIT 1');
   const templateId = tplRows[0]?.id ?? null;
 
-  // resolve authorities in one query
   const emails = to.map(r => r.email);
   let authByEmail = new Map();
   if (emails.length > 0) {
@@ -180,7 +185,8 @@ export async function sendBulkEmails(req, res) {
     authByEmail = new Map(authRows.map(r => [r.email, r.id]));
   }
 
-  const attachments = await buildDbAttachments(); // <-- fixed (no nested array)
+  // <-- only attach when include_attachments is true
+  const attachments = include_attachments ? await buildDbAttachments() : [];
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -231,6 +237,7 @@ export async function sendBulkEmails(req, res) {
 
   return res.json({ success: true, results });
 }
+
 
 /** -----------------------------
  * Token middleware for /send-all-token
