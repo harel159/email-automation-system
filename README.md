@@ -58,14 +58,17 @@ VITE_EMAIL_AUTOMATION_API_BASE_URL=http://localhost:5000
 ```
 
 ## Quick start
-1) Create env files:
-   - server/.env
-   - client/.env.local
 
-2) Run backend:
+1. **Create env files**
+   - `server/.env`
+   - `client/.env.local`
+
+2. **Run backend**
+   ```bash
    npm run dev --prefix server
 
-3) Run frontend:
+
+3. **Run frontend:**
    npm run dev --prefix client
 
 ##Demo flow 
