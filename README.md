@@ -48,12 +48,14 @@ SESSION_SECRET=197774d70c1b626e3e15f9878d1003b6caa3d1b0f491f57c33643da61508bd53b
 SHARED_USER_PASSWORD_HASH=$2b$10$i/4yjwUvNzu2hI4z5dp34.ehcW9NhQIuqV6RJueMklSrQGgqnLV5S
 # encrypt keys
 ENCRYPTION_SECRET=0a9a738b3a81ecabd897d39f205d5522a0c0442b15ef46e5cde18fbf32f5e9b27d0ec807877989db6591c6402bf1c04b
+```
 
-
-### 1) `client/.env.locale` (frontend — exposed to the browser)
+### 1) `client/.env.local` (frontend — exposed to the browser)
 # client/.env.local
+```
 VITE_EMAIL_API_TOKEN=Rd7mXN4JxLZp5VgT2KaBw9FqEsYU3RtP
 VITE_EMAIL_AUTOMATION_API_BASE_URL=http://localhost:5000
+```
 
 ## Quick start
 1) Create env files:
