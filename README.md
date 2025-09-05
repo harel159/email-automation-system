@@ -69,6 +69,7 @@ VITE_EMAIL_AUTOMATION_API_BASE_URL=http://localhost:5000
 
 
 3. **Run frontend:**
+   ```bash
    npm run dev --prefix client
 
 ##Demo flow 
