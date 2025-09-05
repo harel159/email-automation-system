@@ -234,12 +234,12 @@ export default function EmailManager() {
                 {/* Recipients dropdown */}
                 <div className="relative w-[300px]">
                   <Button onClick={() => setShowDropdown(prev => !prev)} variant="outline" className="w-full justify-between">
-                    {testEmail.length > 0 ? `${testEmail.length} selected` : "Select Recipients"}
+                    {testEmail.length > 0 ? `${testEmail.length} selected` : "Select Autorities"}
                     <span>{showDropdown ? "▲" : "▼"}</span>
                   </Button>
                   {showDropdown && (
                     <div className="absolute z-10 w-full mt-1 border rounded-md p-2 max-h-64 overflow-y-auto shadow-md bg-white">
-                      <label className="block px-2 py-1 font-medium text-sm">Recipients</label>
+                      <label className="block px-2 py-1 font-medium text-sm">Authorities</label>
                       <div className="border-t my-1" />
                       <label className="flex items-center px-2 py-1 cursor-pointer">
                         <input

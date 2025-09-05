@@ -118,7 +118,7 @@ export default function ManualEmail() {
 
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Recipients</label>
+            <label className="block text-sm font-medium mb-2">Customers</label>
             <div className="relative w-full">
               <Button
                 onClick={() => setShowDropdown(prev => !prev)}
@@ -127,13 +127,13 @@ export default function ManualEmail() {
               >
                 {selectedAuthorities.length > 0 
                   ? `${selectedAuthorities.length} recipient(s) selected`
-                  : "Select Recipients"}
+                  : "Select Customers"}
                 <span>{showDropdown ? "▲" : "▼"}</span>
               </Button>
 
               {showDropdown && (
                 <div className="absolute z-10 w-full mt-1 border rounded-md p-2 max-h-64 overflow-y-auto shadow-md bg-white">
-                  <label className="block px-2 py-1 font-medium text-sm">Recipients</label>
+                  <label className="block px-2 py-1 font-medium text-sm">Customers</label>
                   <div className="border-t my-1" />
 
                   <label className="flex items-center px-2 py-1 cursor-pointer">

@@ -115,7 +115,7 @@ export default function EmailSender({ authorities = [] }) {
 
       {/* Recipients Dropdown */}
       <div>
-        <label className="block text-sm font-medium mb-2">Recipients</label>
+        <label className="block text-sm font-medium mb-2">Authorities</label>
         <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
