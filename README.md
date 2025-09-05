@@ -3,7 +3,7 @@
 An interview-ready email system:
 - **Manual Email** UI with rich text (Quill)
 - **One-time attachments** (sent from memory, never stored for geeting our customer from time to time)
-- **Per-recipient placeholders** in subject & body: `{{name}}`, `{{firstName}}`, `{{lastName}}`, `{{email}}`
+- **Per-recipient placeholders** in subject & body: `{{name}}`, and optional for future `{{firstName}}`, `{{lastName}}`, `{{email}}`
 - **Token-protected** send endpoint
 - **PostgreSQL (Neon hosted)** for authorities, customers, attachment & logs
 - **Nodemailer (SMTP)** for delivery from a real organization email
