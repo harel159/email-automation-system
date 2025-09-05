@@ -67,21 +67,39 @@ VITE_EMAIL_AUTOMATION_API_BASE_URL=http://localhost:5000
    npm run dev --prefix client
 
 ##Demo flow 
-1st scenario, we are asking multiple athorities to give us information regarding reports our customer have in thier system, we are attaching power of atternaty to ask the information for each client.
-1) login to the system user/password    demo@gmail.com/password
-2) in dashboard under authorities managment click on the add authorities and add nameand your email (te mail will be send to this email).
-3) go to inforamtion reqest tab and check the attachment tab, if you want add new attachment (not mandatory).
-4) go back to content tab and from the drop down select your mail which was added before.
-4.1) if you want you can modify he subject/body as you wish and click save template it will be stored in the DB andwill be pulled in the next login. (not mandatory)
-5) click on the send mail buttom and check your pesonal mail (expecting to see the mail send with the added/existing attachment).
-6)go to the dashboard tab and check the "last email sent" row and see that it was updated. (for tracking purpuses to know when was the last time you ask for information from authority).
+Scenario 1 — Request info from authorities
 
-2nd scenario, we want to send mails to our customers with new information or before the holiday.
-1) go to Greeting Customers tab.
-2) add your mail by clicking the add customer button.
-3) select your email.
-4) you can change the sender name to be personal/company name and the replay to email so the answer will send to other pesonal mail and will not spam company mail. (not mandatory).
-5) add subject and body, tou can add also attachment which will not be stored and sent only once (not mandatory).
-6) send the mail and ceck your personal mail.
-7) you can change the replay to mail to other mail you have or to the same mail and try to replay to mail, your reaply will be sent to the mail you mention. (not mandatory)
+1) Login: demo@gmail.com / password
 
+2) Dashboard → Authorities Management → Add Authority (name + your email).
+
+3) Information Request tab → (optional) Attachments: add or review files.
+
+4) Content tab → select the authority you added.
+
+5) (Optional) edit Subject/Body; Save Template to store for next login.
+
+6) Send → check the email inbox you entered.
+
+7) Dashboard shows Last Email Sent (for tracking).
+
+Scenario 2 — Greet customers (broadcast)
+
+1) Greeting Customers tab.
+
+2) Add Customer (use your email).
+
+3) Select your customer.
+
+4) (Optional) set Sender Name and Reply-To.
+
+5) Enter Subject/Body; (optional) add a one-time attachment.
+
+6) Send → check your inbox.
+
+7) (Optional) reply to the email and confirm it goes to the Reply-To address
+
+## Security (intentional for interview)
+
+Secrets are included here to allow anyone to run the demo without setup.
+If you fork this repo, rotate credentials before making it public.
