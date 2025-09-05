@@ -72,8 +72,8 @@ VITE_EMAIL_AUTOMATION_API_BASE_URL=http://localhost:5000
    ```bash
    npm run dev --prefix client
 
-##Demo flow 
-Scenario 1 — Request info from authorities
+## Demo flow 
+## Scenario 1 — Request info from authorities
 
 1) Login: demo@gmail.com / password
 
@@ -89,7 +89,7 @@ Scenario 1 — Request info from authorities
 
 7) Dashboard shows Last Email Sent (for tracking).
 
-Scenario 2 — Greet customers (broadcast)
+## Scenario 2 — Greet customers (broadcast)
 
 1) Greeting Customers tab.
 
