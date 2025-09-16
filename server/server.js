@@ -28,7 +28,7 @@ const allowedUsers = [{ id: 1, email: 'demo@gmail.com' }];
 
 // LocalStrategy: client sends { email, passwordEncrypted }
 passport.use(
-  new LocalStrategy({ usernameField: 'email' }, (email, encryptedPassword, done) => {
+  new LocalStrategy({ usernameField: 'email', passwordField: 'passwordEncrypted' }, (email, encryptedPassword, done) => {
     const user = allowedUsers.find(u => u.email.toLowerCase() === String(email).toLowerCase());
     if (!user) return done(null, false, { message: 'Invalid email' });
 
@@ -44,6 +44,7 @@ passport.use(
   })
 );
 
+
 passport.serializeUser((user, done) => done(null, user.email));
 passport.deserializeUser((email, done) => {
   const user = allowedUsers.find(u => u.email.toLowerCase() === String(email).toLowerCase());
@@ -55,15 +56,25 @@ passport.deserializeUser((email, done) => {
 // -----------------------------
 const app = express();
 
+app.set('trust proxy', 1);
+const isProd = process.env.NODE_ENV === 'production';
+
+
 // CORS
-app.use(
-  cors({
-    origin: ['http://localhost:5173', 'http://185.229.226.173:3010'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  })
-);
+const allowed = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowed.length === 0 || allowed.includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+}));
 
 // Sessions (cookie-based)
 app.use(
@@ -72,9 +83,9 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // set true behind HTTPS
+      secure: isProd, // set true behind HTTPS
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: isProd ? 'none' : 'lax',
     },
   })
 );
@@ -139,6 +150,11 @@ app.get('/api/authorities', requireLogin, async (req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+//Healthcheck route
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, uptime: process.uptime() });
+});
+
 
 // -----------------------------
 // Start
