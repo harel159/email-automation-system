@@ -26,23 +26,43 @@ const PASSWORD_HASH = process.env.SHARED_USER_PASSWORD_HASH;
 // a single demo user who can log in
 const allowedUsers = [{ id: 1, email: 'demo@gmail.com' }];
 
-// LocalStrategy: client sends { email, passwordEncrypted }
+// LocalStrategy: client sends { email, passwordEncrypted } (fallback to "password")
 passport.use(
-  new LocalStrategy({ usernameField: 'email', passwordField: 'passwordEncrypted' }, (email, encryptedPassword, done) => {
-    const user = allowedUsers.find(u => u.email.toLowerCase() === String(email).toLowerCase());
-    if (!user) return done(null, false, { message: 'Invalid email' });
+  new LocalStrategy(
+    {
+      usernameField: 'email',
+      passwordField: 'passwordEncrypted',
+      passReqToCallback: true, // give us req
+    },
+    (req, email, passwordFromPassport, done) => {
+      const user = allowedUsers.find(u => u.email.toLowerCase() === String(email).toLowerCase());
+      if (!user) return done(null, false, { message: 'Invalid email' });
 
-    try {
-      const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_SECRET);
-      const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
-      const ok = bcrypt.compareSync(decryptedPassword, PASSWORD_HASH);
-      if (!ok) return done(null, false, { message: 'Wrong password' });
-      return done(null, user);
-    } catch {
-      return done(null, false, { message: 'Decryption failed' });
+      // Fallbacks in case the body key is different
+      const body = req.body || {};
+      const encryptedPassword =
+        passwordFromPassport || body.passwordEncrypted || body.password;
+
+      if (!encryptedPassword) {
+        // helpful log; remove later
+        console.error('Login missing password field', { bodyKeys: Object.keys(body || {}) });
+        return done(null, false, { message: 'Missing passwordEncrypted' });
+      }
+
+      try {
+        const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_SECRET);
+        const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
+        const ok = bcrypt.compareSync(decryptedPassword, PASSWORD_HASH);
+        if (!ok) return done(null, false, { message: 'Wrong password' });
+        return done(null, user);
+      } catch (e) {
+        console.error('Decryption error', e);
+        return done(null, false, { message: 'Decryption failed' });
+      }
     }
-  })
+  )
 );
+
 
 
 passport.serializeUser((user, done) => done(null, user.email));
