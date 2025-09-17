@@ -50,6 +50,7 @@ export async function sendEmail({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_EMAIL_API_TOKEN}`,
       },
+      credentials: 'include',
       body: JSON.stringify({ to, subject, body, from_name, reply_to, include_attachments }),
     });
   }
