@@ -4,19 +4,27 @@ import { query } from '../db/index.js';
 // GET /api/clients  -> list authorities
 export async function getAllAuthorities(req, res) {
   try {
+    // Join last email sent per authority (sent or failed both counted, latest wins)
     const { rows } = await query(`
-      SELECT id, name, email, active
-      FROM authorities
-      ORDER BY name
+      SELECT a.id,
+             a.name,
+             a.email,
+             a.active,
+             (
+               SELECT MAX(el.created_at)
+               FROM email_logs el
+               WHERE el.authority_id = a.id
+             ) AS last_email_sent
+      FROM authorities a
+      ORDER BY a.name
     `);
 
-    // you can add last_email_sent if you later store it in email_logs
     res.json(rows.map(r => ({
       id: r.id,
       name: r.name,
       email: r.email,
       active: r.active,
-      last_email_sent: null,
+      last_email_sent: r.last_email_sent,
     })));
   } catch (err) {
     console.error('GET /api/clients error:', err);
