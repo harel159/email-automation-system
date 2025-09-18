@@ -10,11 +10,12 @@ import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import bcrypt from 'bcrypt';
 import CryptoJS from 'crypto-js';
+
 import customerRoutes from './routes/customerRoutes.js';
-import { query } from './db/index.js';
 import clientRoutes from './routes/clientRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
 import { sendBulkEmails, verifyEmailApiToken } from './controllers/emailController.js';
+import { query } from './db/index.js';
 
 // -----------------------------
 // Auth config
@@ -23,47 +24,101 @@ const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'super_secret';
 const PASSWORD_HASH = process.env.SHARED_USER_PASSWORD_HASH;
 
-// a single demo user who can log in
+// single demo user
 const allowedUsers = [{ id: 1, email: 'demo@gmail.com' }];
 
-// LocalStrategy: client sends { email, passwordEncrypted } (fallback to "password")
-passport.use(
+// -----------------------------
+// App & basics
+// -----------------------------
+const app = express();
+app.set('trust proxy', 1);
+const isProd = process.env.NODE_ENV === 'production';
+
+// -----------------------------
+// CORS (allowlist from env)
+// -----------------------------
+const allowed = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // same-origin or non-browser
+    if (allowed.includes(origin)) return cb(null, true);
+
+    // wildcard like https://*.vercel.app supported
+    const w = allowed.find(a => a.startsWith('https://*.'));
+    if (w) {
+      const suffix = w.replace('https://*.', '');
+      try {
+        const host = new URL(origin).hostname;
+        if (host.endsWith(suffix)) return cb(null, true);
+      } catch {}
+    }
+    return cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // preflight
+
+// -----------------------------
+// Body parsers BEFORE passport
+// -----------------------------
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Optional uploads
+app.use(fileUpload());
+
+// -----------------------------
+// Sessions THEN Passport
+// -----------------------------
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: isProd,
+    httpOnly: true,
+    sameSite: isProd ? 'none' : 'lax',
+  },
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+// -----------------------------
+// Passport strategy
+// Accepts {email, passwordEncrypted} or {email, password}
+// We normalize to "password" then decrypt and compare
+// -----------------------------
+passport.use('local',
   new LocalStrategy(
-    {
-      usernameField: 'email',
-      passwordField: 'passwordEncrypted',
-      passReqToCallback: true, // give us req
-    },
-    (req, email, passwordFromPassport, done) => {
-      const user = allowedUsers.find(u => u.email.toLowerCase() === String(email).toLowerCase());
+    { usernameField: 'email', passwordField: 'password' },
+    (email, encryptedPassword, done) => {
+      const user = allowedUsers.find(
+        u => u.email.toLowerCase() === String(email).toLowerCase()
+      );
       if (!user) return done(null, false, { message: 'Invalid email' });
-
-      // Fallbacks in case the body key is different
-      const body = req.body || {};
-      const encryptedPassword =
-        passwordFromPassport || body.passwordEncrypted || body.password;
-
-      if (!encryptedPassword) {
-        // helpful log; remove later
-        console.error('Login missing password field', { bodyKeys: Object.keys(body || {}) });
-        return done(null, false, { message: 'Missing passwordEncrypted' });
-      }
 
       try {
         const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_SECRET);
-        const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
-        const ok = bcrypt.compareSync(decryptedPassword, PASSWORD_HASH);
+        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decrypted) return done(null, false, { message: 'Decryption failed' });
+
+        const ok = bcrypt.compareSync(decrypted, PASSWORD_HASH);
         if (!ok) return done(null, false, { message: 'Wrong password' });
+
         return done(null, user);
       } catch (e) {
-        console.error('Decryption error', e);
         return done(null, false, { message: 'Decryption failed' });
       }
     }
   )
 );
-
-
 
 passport.serializeUser((user, done) => done(null, user.email));
 passport.deserializeUser((email, done) => {
@@ -72,61 +127,31 @@ passport.deserializeUser((email, done) => {
 });
 
 // -----------------------------
-// App & middleware
-// -----------------------------
-const app = express();
-
-app.set('trust proxy', 1);
-const isProd = process.env.NODE_ENV === 'production';
-
-
-// CORS
-const allowed = (process.env.CORS_ORIGIN || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowed.length === 0 || allowed.includes(origin)) return cb(null, true);
-    return cb(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
-}));
-
-// Sessions (cookie-based)
-app.use(
-  session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: isProd, // set true behind HTTPS
-      httpOnly: true,
-      sameSite: isProd ? 'none' : 'lax',
-    },
-  })
-);
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Body/file parsers
-app.use(express.json());
-app.use(fileUpload());
-
 // Static
+// -----------------------------
 app.use('/uploads', express.static('uploads'));
 app.use('/attachments', express.static('attachments'));
 
 // -----------------------------
 // Auth endpoints
 // -----------------------------
-app.post('/api/login', passport.authenticate('local'), (req, res) => {
-  res.json({ success: true, email: req.user.email });
-});
+app.post(
+  '/api/login',
+  // normalize body so Passport always sees "password"
+  (req, _res, next) => {
+    const b = req.body || {};
+    if (!b.password && b.passwordEncrypted) req.body.password = b.passwordEncrypted;
+    next();
+  },
+  passport.authenticate('local', { failWithError: true }),
+  (req, res) => res.json({ success: true, email: req.user.email }),
+  // error -> send clear JSON (400 if missing, 401 otherwise)
+  (err, _req, res, _next) => {
+    const msg = err?.message || 'Auth failed';
+    const code = /missing credentials/i.test(msg) ? 400 : 401;
+    res.status(code).json({ ok: false, error: msg });
+  }
+);
 
 app.post('/api/logout', (req, res) => {
   req.logout(() => res.json({ success: true }));
@@ -137,27 +162,21 @@ app.get('/api/check-auth', (req, res) => {
   return res.status(401).json({ authenticated: false });
 });
 
-// Session guard for app routes
+// -----------------------------
+// Guards & API routes
+// -----------------------------
 function requireLogin(req, res, next) {
   if (req.isAuthenticated()) return next();
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
-// -----------------------------
-// API routes
-// -----------------------------
-
-// Public token route (no session) — for interview quick demo if desired
 app.post('/api/email/send-all-token', verifyEmailApiToken, sendBulkEmails);
-
-// Session-protected app routes
 app.post('/api/email/send-all', requireLogin, sendBulkEmails);
-app.use('/api/email', requireLogin, emailRoutes);   // includes: template + attachments CRUD
+app.use('/api/email', requireLogin, emailRoutes);
 app.use('/api/clients', requireLogin, clientRoutes);
 app.use('/api/customers', requireLogin, customerRoutes);
 
-// Example: authorities list (used by UI)
-app.get('/api/authorities', requireLogin, async (req, res) => {
+app.get('/api/authorities', requireLogin, async (_req, res) => {
   try {
     const { rows } = await query(
       `SELECT id, name, email, active
@@ -170,11 +189,11 @@ app.get('/api/authorities', requireLogin, async (req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
-//Healthcheck route
+
+// Healthcheck
 app.get('/health', (_req, res) => {
   res.json({ ok: true, uptime: process.uptime() });
 });
-
 
 // -----------------------------
 // Start
