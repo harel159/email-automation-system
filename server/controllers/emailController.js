@@ -215,15 +215,27 @@ export async function sendBulkEmails(req, res) {
   const { rows: tplRows } = await query('SELECT id FROM email_templates ORDER BY id LIMIT 1');
   const templateId = tplRows[0]?.id ?? null;
 
-  //  Map authorities by email
+  //  Map authorities for attribution in logs
+  // 1) Exact email match
   const emails = to.map(r => r.email);
   let authByEmail = new Map();
+  let authByUniqueDomain = new Map();
   if (emails.length > 0) {
     const { rows: authRows } = await query(
-      'SELECT id, email FROM authorities WHERE email = ANY($1::text[])',
-      [emails]
+      'SELECT id, email FROM authorities'
     );
     authByEmail = new Map(authRows.map(r => [r.email, r.id]));
+    // 2) Unique domain fallback (only if a domain belongs to exactly one authority)
+    const domainToIds = new Map();
+    for (const r of authRows) {
+      const domain = String(r.email).split('@')[1]?.toLowerCase();
+      if (!domain) continue;
+      if (!domainToIds.has(domain)) domainToIds.set(domain, new Set());
+      domainToIds.get(domain).add(r.id);
+    }
+    for (const [domain, ids] of domainToIds.entries()) {
+      if (ids.size === 1) authByUniqueDomain.set(domain, Array.from(ids)[0]);
+    }
   }
 
   
@@ -255,7 +267,13 @@ export async function sendBulkEmails(req, res) {
   //Send loop with per-recipient templating
   for (const recipient of to) {
     const recipientEmail = recipient.email;
-    const authorityId = authByEmail.get(recipientEmail) ?? null;
+    let authorityId = authByEmail.get(recipientEmail) ?? null;
+    if (!authorityId) {
+      const domain = String(recipientEmail).split('@')[1]?.toLowerCase();
+      if (domain && authByUniqueDomain.has(domain)) {
+        authorityId = authByUniqueDomain.get(domain);
+      }
+    }
 
     // Build variables and render placeholders
     const tplVars = varsFromRecipient(recipient); // {{name}}
