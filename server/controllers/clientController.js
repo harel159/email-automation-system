@@ -13,7 +13,7 @@ export async function getAllAuthorities(req, res) {
              (
                SELECT MAX(el.created_at)
                FROM email_logs el
-               WHERE el.authority_id = a.id
+               WHERE el.email = a.email
              ) AS last_email_sent
       FROM authorities a
       ORDER BY a.name
