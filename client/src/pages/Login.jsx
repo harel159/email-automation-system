@@ -26,7 +26,7 @@ const handleLogin = async () => {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: encryptedPassword }),
+      body: JSON.stringify({ email, passwordEncrypted: encryptedPassword }),
     });
 
     if (!res.ok) throw new Error('Login failed');
