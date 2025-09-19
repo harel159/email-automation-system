@@ -63,7 +63,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type','Authorization'],
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // preflight
+//app.options('/(.*)', cors(corsOptions));
 
 // -----------------------------
 // Body parsers BEFORE passport
