@@ -18,71 +18,86 @@ import { sendBulkEmails, verifyEmailApiToken } from './controllers/emailControll
 import { query } from './db/index.js';
 
 // -----------------------------
-// Auth config
+// Auth config (ENV)
 // -----------------------------
-const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'super_secret';
-const PASSWORD_HASH = process.env.SHARED_USER_PASSWORD_HASH;
+const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET; // must match FE VITE_ENCRYPTION_SECRET
+const SESSION_SECRET     = process.env.SESSION_SECRET || 'super_secret';
+const PASSWORD_HASH      = process.env.SHARED_USER_PASSWORD_HASH; // bcrypt hash of 'password' (demo)
 
-// single demo user
 const allowedUsers = [{ id: 1, email: 'demo@gmail.com' }];
 
 // -----------------------------
-// App & basics
+// App
 // -----------------------------
 const app = express();
 app.set('trust proxy', 1);
 const isProd = process.env.NODE_ENV === 'production';
 
 // -----------------------------
-// CORS (allowlist from env)
+// CORS — works with any new Vercel preview URL
+// Add your prod FE domain in PROD_ORIGIN (e.g. https://email-automation-system-steel.vercel.app)
+// Optionally add extra comma-separated origins in CORS_ORIGINS
 // -----------------------------
-const allowed = (process.env.CORS_ORIGIN || '')
+const PROD_ORIGIN = (process.env.PROD_ORIGIN || '').trim();
+const EXTRA = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
 
-const corsOptions = {
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // same-origin or non-browser
-    if (allowed.includes(origin)) return cb(null, true);
+// allow *.vercel.app previews automatically
+const allowHostRegexes = [/\.vercel\.app$/];
 
-    // wildcard like https://*.vercel.app supported
-    const w = allowed.find(a => a.startsWith('https://*.'));
-    if (w) {
-      const suffix = w.replace('https://*.', '');
-      try {
-        const host = new URL(origin).hostname;
-        if (host.endsWith(suffix)) return cb(null, true);
-      } catch {}
-    }
-    return cb(new Error('Not allowed by CORS'));
+const corsOptions = {
+  origin(origin, cb) {
+    // server-to-server / curl / same-origin
+    if (!origin) return cb(null, true);
+
+    // exact allow (prod + extras)
+    if (origin === PROD_ORIGIN || EXTRA.includes(origin)) return cb(null, true);
+
+    // wildcard: *.vercel.app
+    try {
+      const host = new URL(origin).hostname;
+      if (allowHostRegexes.some(r => r.test(host))) return cb(null, true);
+    } catch { /* fallthrough */ }
+
+    return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
-  credentials: true,
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
+  credentials: true,
 };
+
 app.use(cors(corsOptions));
-//app.options('/(.*)', cors(corsOptions));
+app.options('*', cors(corsOptions)); // handle preflight fast
+
+// (Optional) prevent stale API caching
+app.set('etag', false);
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
 
 // -----------------------------
-// Body parsers BEFORE passport
+// Body parsers & uploads
 // -----------------------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Optional uploads
 app.use(fileUpload());
 
 // -----------------------------
-// Sessions THEN Passport
+// Sessions & Passport
 // -----------------------------
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: isProd,
+    secure: isProd,              // required for SameSite=None
     httpOnly: true,
     sameSite: isProd ? 'none' : 'lax',
   },
@@ -90,32 +105,35 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// -----------------------------
-// Passport strategy
-// Accepts {email, passwordEncrypted} or {email, password}
-// We normalize to "password" then decrypt and compare
-// -----------------------------
+// Safe decrypt helper
+function decryptSafe(cipher) {
+  try {
+    const bytes = CryptoJS.AES.decrypt(cipher, ENCRYPTION_SECRET);
+    const plain = bytes.toString(CryptoJS.enc.Utf8);
+    if (!plain) throw new Error('empty');
+    return plain;
+  } catch {
+    return null;
+  }
+}
+
+// Passport Strategy — accepts {email, passwordEncrypted} OR {email, password}
 passport.use('local',
   new LocalStrategy(
     { usernameField: 'email', passwordField: 'password' },
-    (email, encryptedPassword, done) => {
+    (email, passwordOrEncrypted, done) => {
       const user = allowedUsers.find(
-        u => u.email.toLowerCase() === String(email).toLowerCase()
+        u => u.email.toLowerCase() === String(email || '').toLowerCase()
       );
       if (!user) return done(null, false, { message: 'Invalid email' });
 
-      try {
-        const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_SECRET);
-        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-        if (!decrypted) return done(null, false, { message: 'Decryption failed' });
+      const maybeClear = decryptSafe(passwordOrEncrypted) || passwordOrEncrypted;
+      if (!maybeClear) return done(null, false, { message: 'Decryption failed' });
 
-        const ok = bcrypt.compareSync(decrypted, PASSWORD_HASH);
-        if (!ok) return done(null, false, { message: 'Wrong password' });
+      const ok = bcrypt.compareSync(maybeClear, PASSWORD_HASH || '');
+      if (!ok) return done(null, false, { message: 'Wrong password' });
 
-        return done(null, user);
-      } catch (e) {
-        return done(null, false, { message: 'Decryption failed' });
-      }
+      return done(null, user);
     }
   )
 );
@@ -137,7 +155,7 @@ app.use('/attachments', express.static('attachments'));
 // -----------------------------
 app.post(
   '/api/login',
-  // normalize body so Passport always sees "password"
+  // normalize: allow passwordEncrypted
   (req, _res, next) => {
     const b = req.body || {};
     if (!b.password && b.passwordEncrypted) req.body.password = b.passwordEncrypted;
@@ -145,7 +163,6 @@ app.post(
   },
   passport.authenticate('local', { failWithError: true }),
   (req, res) => res.json({ success: true, email: req.user.email }),
-  // error -> send clear JSON (400 if missing, 401 otherwise)
   (err, _req, res, _next) => {
     const msg = err?.message || 'Auth failed';
     const code = /missing credentials/i.test(msg) ? 400 : 401;
@@ -163,7 +180,7 @@ app.get('/api/check-auth', (req, res) => {
 });
 
 // -----------------------------
-// Guards & API routes
+// Guards & Routes
 // -----------------------------
 function requireLogin(req, res, next) {
   if (req.isAuthenticated()) return next();
@@ -173,24 +190,50 @@ function requireLogin(req, res, next) {
 app.post('/api/email/send-all-token', verifyEmailApiToken, sendBulkEmails);
 app.post('/api/email/send-all', requireLogin, sendBulkEmails);
 app.use('/api/email', requireLogin, emailRoutes);
-app.use('/api/clients', requireLogin, clientRoutes);
 app.use('/api/customers', requireLogin, customerRoutes);
 
-app.get('/api/authorities', requireLogin, async (_req, res) => {
+// ---- Authorities with lastEmailSent
+async function listAuthoritiesHandler(_req, res) {
   try {
-    const { rows } = await query(
-      `SELECT id, name, email, active
-       FROM authorities
-       ORDER BY name`
-    );
-    res.json(rows);
+    const { rows } = await query(`
+      SELECT
+        a.id, a.name, a.email, a.active, a.created_at,
+        MAX(el.created_at) FILTER (WHERE el.status = 'sent') AS last_sent_at
+      FROM authorities a
+      LEFT JOIN email_logs el ON el.authority_id = a.id
+      GROUP BY a.id, a.name, a.email, a.active, a.created_at
+      ORDER BY a.name ASC
+    `);
+
+    // expose both keys for compatibility (snake_case + camelCase)
+    const shaped = rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      active: r.active,
+      createdAt: r.created_at,
+      last_sent_at: r.last_sent_at ?? null,
+      lastEmailSent: r.last_sent_at ?? null,
+    }));
+
+    res.json(shaped);
   } catch (err) {
     console.error('GET /api/authorities error:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
-});
+}
 
-// Healthcheck
+app.get('/api/authorities', requireLogin, listAuthoritiesHandler);
+
+// Compat alias: some FE builds still call /api/clients for authorities
+app.get('/api/clients', requireLogin, listAuthoritiesHandler);
+
+// Keep any additional client routes (placed AFTER the alias so the alias wins)
+app.use('/api/clients', requireLogin, clientRoutes);
+
+// -----------------------------
+// Health
+// -----------------------------
 app.get('/health', (_req, res) => {
   res.json({ ok: true, uptime: process.uptime() });
 });
