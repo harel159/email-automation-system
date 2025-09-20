@@ -21,8 +21,8 @@ import { query } from './db/index.js';
 // Auth config (ENV)
 // -----------------------------
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET; // must match FE VITE_ENCRYPTION_SECRET
-const SESSION_SECRET     = process.env.SESSION_SECRET || 'super_secret';
-const PASSWORD_HASH      = process.env.SHARED_USER_PASSWORD_HASH; // bcrypt hash of 'password' (demo)
+const SESSION_SECRET    = process.env.SESSION_SECRET || 'super_secret';
+const PASSWORD_HASH     = process.env.SHARED_USER_PASSWORD_HASH; // bcrypt hash for demo user
 
 const allowedUsers = [{ id: 1, email: 'demo@gmail.com' }];
 
@@ -34,32 +34,25 @@ app.set('trust proxy', 1);
 const isProd = process.env.NODE_ENV === 'production';
 
 // -----------------------------
-// CORS — works with any new Vercel preview URL
-// Add your prod FE domain in PROD_ORIGIN (e.g. https://email-automation-system-steel.vercel.app)
-// Optionally add extra comma-separated origins in CORS_ORIGINS
+// CORS — preconfigured for your setup
 // -----------------------------
-const PROD_ORIGIN = (process.env.PROD_ORIGIN || '').trim();
-const EXTRA = (process.env.CORS_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
-// allow *.vercel.app previews automatically
-const allowHostRegexes = [/\.vercel\.app$/];
+const PROD_ORIGIN = 'https://email-automation-system-steel.vercel.app';
+const EXTRA_ORIGINS = ['http://localhost:5173']; // dev
+const TEAM_SUFFIX = 'harel159s-projects.vercel.app'; // allow all previews for your account
 
 const corsOptions = {
   origin(origin, cb) {
-    // server-to-server / curl / same-origin
-    if (!origin) return cb(null, true);
+    if (!origin) return cb(null, true); // curl/postman/same-origin
 
-    // exact allow (prod + extras)
-    if (origin === PROD_ORIGIN || EXTRA.includes(origin)) return cb(null, true);
+    if (origin === PROD_ORIGIN || EXTRA_ORIGINS.includes(origin)) {
+      return cb(null, true);
+    }
 
-    // wildcard: *.vercel.app
     try {
       const host = new URL(origin).hostname;
-      if (allowHostRegexes.some(r => r.test(host))) return cb(null, true);
-    } catch { /* fallthrough */ }
+      // allow any preview like https://<hash>-harel159s-projects.vercel.app
+      if (host.endsWith(`.${TEAM_SUFFIX}`)) return cb(null, true);
+    } catch { /* ignore */ }
 
     return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
@@ -69,9 +62,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // handle preflight fast
+app.options('*', cors(corsOptions)); // handle preflight
 
-// (Optional) prevent stale API caching
+// Prevent stale API caching
 app.set('etag', false);
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) {
@@ -97,7 +90,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: isProd,              // required for SameSite=None
+    secure: isProd,              // needed for SameSite=None
     httpOnly: true,
     sameSite: isProd ? 'none' : 'lax',
   },
@@ -228,7 +221,7 @@ app.get('/api/authorities', requireLogin, listAuthoritiesHandler);
 // Compat alias: some FE builds still call /api/clients for authorities
 app.get('/api/clients', requireLogin, listAuthoritiesHandler);
 
-// Keep any additional client routes (placed AFTER the alias so the alias wins)
+// Keep any additional client routes
 app.use('/api/clients', requireLogin, clientRoutes);
 
 // -----------------------------
@@ -242,4 +235,11 @@ app.get('/health', (_req, res) => {
 // Start
 // -----------------------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log('CORS allow ->', {
+    prod: PROD_ORIGIN,
+    previewsSuffix: TEAM_SUFFIX,
+    extra: EXTRA_ORIGINS
+  });
+});
