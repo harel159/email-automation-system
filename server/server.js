@@ -2,6 +2,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import { getAllAuthorities } from './controllers/clientController.js';
 import express from 'express';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
@@ -251,6 +252,9 @@ async function listAuthoritiesHandler(_req, res) {
 }
 
 app.get('/api/authorities', requireLogin, listAuthoritiesHandler);
+
+// after requireLogin is defined, before app.use('/api/clients', ...)
+app.get('/api/clients/__list', requireLogin, getAllAuthorities);
 
 // Keep any additional client routes
 app.use('/api/clients', requireLogin, clientRoutes);
