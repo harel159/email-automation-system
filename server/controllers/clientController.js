@@ -2,42 +2,41 @@
 import { query } from '../db/index.js';
 
 // GET /api/clients  -> list authorities
-export async function getAllAuthorities(req, res) {
+// GET /api/clients  -> list authorities (with last sent email timestamp)
+export async function getAllAuthorities(_req, res) {
   try {
-    // Join last email sent per authority (sent or failed both counted, latest wins)
     const { rows } = await query(`
-      SELECT a.id,
-             a.name,
-             a.email,
-             a.active,
-             COALESCE(
-               (
-                 SELECT MAX(el.created_at)
-                 FROM email_logs el
-                 WHERE el.authority_id = a.id
-               ),
-               (
-                 SELECT MAX(el2.created_at)
-                 FROM email_logs el2
-                 WHERE el2.email = a.email
-               )
-             ) AS last_email_sent
-      FROM authorities a
-      ORDER BY a.name
+      SELECT
+        a.id,
+        a.name,
+        a.email,
+        a.active,
+        a.created_at,
+        MAX(el.created_at) FILTER (WHERE el.status = 'sent') AS last_sent_at
+      FROM public.authorities a
+      LEFT JOIN public.email_logs el
+        ON el.authority_id = a.id
+      GROUP BY a.id, a.name, a.email, a.active, a.created_at
+      ORDER BY a.name ASC
     `);
 
+    // expose multiple keys so any UI variant can read it
     res.json(rows.map(r => ({
       id: r.id,
       name: r.name,
       email: r.email,
       active: r.active,
-      last_email_sent: r.last_email_sent,
+      created_at: r.created_at,
+      last_sent_at:  r.last_sent_at ?? null,
+      lastEmailSent: r.last_sent_at ?? null,
+      last_email_sent: r.last_sent_at ?? null,
     })));
   } catch (err) {
     console.error('GET /api/clients error:', err);
     res.status(500).json({ error: 'Failed to load authorities' });
   }
 }
+
 
 // POST /api/clients  -> create authority
 // Body: { name, email, active? }
