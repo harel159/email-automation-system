@@ -256,6 +256,9 @@ app.get('/api/authorities', requireLogin, listAuthoritiesHandler);
 // after requireLogin is defined, before app.use('/api/clients', ...)
 app.get('/api/clients/__list', requireLogin, getAllAuthorities);
 
+app.get('/api/__version', (_req,res) => res.json({ started: new Date().toISOString() }));
+
+
 // Keep any additional client routes
 app.use('/api/clients', requireLogin, clientRoutes);
 
