@@ -18,6 +18,10 @@ export async function getAllAuthorities(_req, res) {
       GROUP BY a.id, a.name, a.email, a.active, a.created_at
       ORDER BY a.name ASC
     `);
+    console.log(
+      '[getAllAuthorities] sample:',
+       rows.map(r => ({ id: r.id, last_sent_at: r.last_sent_at })).slice(0, 10)
+    );
 
     res.json(rows.map(r => ({
       id: r.id,
