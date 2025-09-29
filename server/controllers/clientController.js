@@ -1,7 +1,6 @@
 // server/controllers/clientController.js
 import { query } from '../db/index.js';
 
-// GET /api/clients  -> list authorities
 // GET /api/clients  -> list authorities (with last sent email timestamp)
 export async function getAllAuthorities(_req, res) {
   try {
