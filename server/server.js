@@ -252,9 +252,6 @@ async function listAuthoritiesHandler(_req, res) {
 
 app.get('/api/authorities', requireLogin, listAuthoritiesHandler);
 
-// Compat alias: some FE builds still call /api/clients for authorities
-app.get('/api/clients', requireLogin, listAuthoritiesHandler);
-
 // Keep any additional client routes
 app.use('/api/clients', requireLogin, clientRoutes);
 

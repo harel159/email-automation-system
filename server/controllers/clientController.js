@@ -19,13 +19,13 @@ export async function getAllAuthorities(_req, res) {
       ORDER BY a.name ASC
     `);
 
-    // expose multiple keys so any UI variant can read it
     res.json(rows.map(r => ({
       id: r.id,
       name: r.name,
       email: r.email,
       active: r.active,
       created_at: r.created_at,
+      // expose multiple keys so any FE build works
       last_sent_at:  r.last_sent_at ?? null,
       lastEmailSent: r.last_sent_at ?? null,
       last_email_sent: r.last_sent_at ?? null,
@@ -35,6 +35,7 @@ export async function getAllAuthorities(_req, res) {
     res.status(500).json({ error: 'Failed to load authorities' });
   }
 }
+
 
 
 // POST /api/clients  -> create authority
