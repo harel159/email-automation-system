@@ -1,7 +1,7 @@
 // server/controllers/clientController.js
 import { query } from '../db/index.js';
 
-// GET /api/clients  -> list authorities (with last sent email timestamp)
+// GET /api/clients (and /api/clients/__list) → list authorities with last sent timestamp
 export async function getAllAuthorities(_req, res) {
   try {
     const { rows } = await query(`
@@ -18,18 +18,14 @@ export async function getAllAuthorities(_req, res) {
       GROUP BY a.id, a.name, a.email, a.active, a.created_at
       ORDER BY a.name ASC
     `);
-    console.log(
-      '[getAllAuthorities] sample:',
-       rows.map(r => ({ id: r.id, last_sent_at: r.last_sent_at })).slice(0, 10)
-    );
 
+    // return all three keys for UI compatibility
     res.json(rows.map(r => ({
       id: r.id,
       name: r.name,
       email: r.email,
       active: r.active,
       created_at: r.created_at,
-      // expose multiple keys so any FE build works
       last_sent_at:  r.last_sent_at ?? null,
       lastEmailSent: r.last_sent_at ?? null,
       last_email_sent: r.last_sent_at ?? null,
