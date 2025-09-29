@@ -1,8 +1,8 @@
-# EmailProject(interview adition)
+# EmailProject(interview edition)
 
 An interview-ready email system:
 - **Manual Email** UI with rich text (Quill)
-- **One-time attachments** (sent from memory, never stored for geeting our customer from time to time)
+- **One-time attachments** (sent from memory, never stored for greeting our customer from time to time)
 - **Per-recipient placeholders** in subject & body: `{{name}}`, and optional for future `{{firstName}}`, `{{lastName}}`, `{{email}}`
 - **Token-protected** send endpoint
 - **PostgreSQL (Neon hosted)** for authorities, customers, attachment & logs
@@ -20,7 +20,10 @@ An interview-ready email system:
 - express-fileupload
 - dotenv
 
-## Environment setup
+## Production Environment
+Use the live app in production: https://email-automation-system-steel.vercel.app
+
+## Environment setup for local
 
 This project uses **two** env files:
 
@@ -32,28 +35,28 @@ Used by Node/Express only. **Do not put these in the client.**
 PORT=5000
 
 # Postgres (Neon pooled URL)
-DATABASE_URL=postgresql://neondb_owner:npg_T0Oe9EwJnDcI@ep-odd-lake-ab4qsktb-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 
 # SMTP (Nodemailer)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-EMAIL_USER=emailsystemdemo1@gmail.com
-EMAIL_PASS=zfcxinjmishwfwpz
+EMAIL_USER=demo@example.com (replace with your email)
+EMAIL_PASS=REPLACE_ME with app password (not real email password)
 
-# API token the backend expects from the client
-EMAIL_API_TOKEN=Rd7mXN4JxLZp5VgT2KaBw9FqEsYU3RtP
+# Bulk send (token-protected endpoint)
+EMAIL_API_TOKEN=REPLACE_ME
 
-# other server secrets
-SESSION_SECRET=197774d70c1b626e3e15f9878d1003b6caa3d1b0f491f57c33643da61508bd53bdb20d0b4950058501ed9aff4e0e1b12
-SHARED_USER_PASSWORD_HASH=$2b$10$i/4yjwUvNzu2hI4z5dp34.ehcW9NhQIuqV6RJueMklSrQGgqnLV5S
-# encrypt keys
-ENCRYPTION_SECRET=0a9a738b3a81ecabd897d39f205d5522a0c0442b15ef46e5cde18fbf32f5e9b27d0ec807877989db6591c6402bf1c04b
+# Sessions & auth
+SESSION_SECRET=REPLACE_ME
+ENCRYPTION_SECRET=REPLACE_ME           # must match the client VITE_ENCRYPTION_SECRET
+SHARED_USER_PASSWORD_HASH=REPLACE_ME   # bcrypt hash of your demo password (e.g. "password")
 ```
 
-### 1) `client/.env.local` (frontend — exposed to the browser)
-# client/.env.local
+### 2) `client/.env.local` (frontend — exposed to the browser)
+
 ```
-VITE_EMAIL_API_TOKEN=Rd7mXN4JxLZp5VgT2KaBw9FqEsYU3RtP
+# must be identical to server ENCRYPTION_SECRET
+VITE_ENCRYPTION_SECRET=REPLACE_ME
 VITE_EMAIL_AUTOMATION_API_BASE_URL=http://localhost:5000
 ```
 
@@ -66,11 +69,13 @@ VITE_EMAIL_AUTOMATION_API_BASE_URL=http://localhost:5000
 2. **Run backend**
    ```bash
    npm run dev --prefix server
+   ```
 
 
 3. **Run frontend:**
    ```bash
    npm run dev --prefix client
+   ```
 
 ## Demo flow 
 ## Scenario 1 — Request info from authorities
@@ -107,5 +112,22 @@ VITE_EMAIL_AUTOMATION_API_BASE_URL=http://localhost:5000
 
 ## Security (intentional for interview)
 
-Secrets are included here to allow anyone to run the demo without setup.
-If you fork this repo, rotate credentials before making it public.
+- **No secrets in repo.** Use env vars in **Vercel** (client) and **Koyeb** (server). Keep `.env` out of git; placeholders like `REPLACE_ME` are intentional.
+- **Credentials**
+  - `ENCRYPTION_SECRET` (server) must equal `VITE_ENCRYPTION_SECRET` (client).
+  - `SHARED_USER_PASSWORD_HASH` is the bcrypt of the demo password. Rotate whenever sharing.
+  - **Do not** expose `EMAIL_API_TOKEN` in the client; call `/api/email/send-all-token` from server-side only.
+- **CORS**
+  - Locked to `https://email-automation-system-steel.vercel.app`, all previews under `*.harel159s-projects.vercel.app`, and `http://localhost:5173`. No wildcards in prod.
+- **Email**
+  - Use an SMTP **app password** (not a real user password). 
+- **Files**
+  - Limit upload size & types; reject executables.
+- **Database**
+  - Neon with SSL; least-privilege DB user; avoid logging PII; define backup/retention policy.
+- **Logging & Monitoring**
+  - Don’t log secrets; redact tokens. Keep `/health` and an `/api/__version` endpoint for sanity checks. Alert on 5xx spikes.
+- **Data handling**
+  - `email_logs` store metadata (status/timestamp). Support delete on request for authorities/customers; document retention if needed.
+- **Threat model note**
+  - Client-side AES is **demo convenience**, not real secrecy. 
