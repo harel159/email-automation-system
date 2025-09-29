@@ -185,6 +185,38 @@ app.post('/api/email/send-all', requireLogin, sendBulkEmails);
 app.use('/api/email', requireLogin, emailRoutes);
 app.use('/api/customers', requireLogin, customerRoutes);
 
+// --- DIAG: what the server sees in email_logs
+app.get('/api/__diag/logs', requireLogin, async (_req, res) => {
+  const agg = await query(`
+    SELECT
+      COUNT(*) AS total,
+      COUNT(*) FILTER (WHERE status='sent') AS sent,
+      MAX(created_at) AS last_any
+    FROM public.email_logs
+  `);
+  const per = await query(`
+    SELECT authority_id, MAX(created_at) AS last_sent_at
+    FROM public.email_logs
+    WHERE status='sent'
+    GROUP BY authority_id
+    ORDER BY authority_id
+  `);
+  res.json({ agg: agg.rows[0], perAuthority: per.rows });
+});
+
+// --- DIAG: run the exact join the route should use (schema-qualified)
+app.get('/api/__diag/authorities', requireLogin, async (_req, res) => {
+  const { rows } = await query(`
+    SELECT
+      a.id, a.name, a.email, a.active, a.created_at,
+      MAX(el.created_at) FILTER (WHERE el.status='sent') AS last_sent_at
+    FROM public.authorities a
+    LEFT JOIN public.email_logs el ON el.authority_id = a.id
+    GROUP BY a.id, a.name, a.email, a.active, a.created_at
+    ORDER BY a.name ASC
+  `);
+  res.json(rows);
+});
 
 
 // ---- Authorities with lastEmailSent
